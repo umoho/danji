@@ -24,6 +24,12 @@ log = "0.4"
 serde = { version = "1", features = ["derive"], optional = true }
 serde_json = { version = "1", optional = true }
 
+# 音频 I/O
+hound = "3"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
 [dev-dependencies]
 # 音频 I/O (示例用)
 cpal = "0.15"
