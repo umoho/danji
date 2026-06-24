@@ -90,6 +90,22 @@ impl CircuitSolver {
                 }
             }
 
+            for ind in &circuit.inductors {
+                let a = ind.a.0;
+                let b = ind.b.0;
+                let gl = ind.henrys.recip() * h;
+                if a > 0 {
+                    self.g[a][a] += gl;
+                    if b > 0 { self.g[a][b] -= gl; }
+                    self.i[a] += ind.i_prev;
+                }
+                if b > 0 {
+                    self.g[b][b] += gl;
+                    if a > 0 { self.g[b][a] -= gl; }
+                    self.i[b] -= ind.i_prev;
+                }
+            }
+
             for tri in &circuit.triodes {
                 let p = tri.plate.0;
                 let g = tri.grid.0;
