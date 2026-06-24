@@ -10,7 +10,9 @@ fn main() -> Result<(), danji::DanjiError> {
     let params = vec![TriodeParams::new_12ax7()];
 
     let input: Vec<f32> = (0..num_samples)
-        .map(|i| (2.0 * std::f64::consts::PI * 1000.0 * i as f64 / sample_rate as f64).sin() as f32 * 0.1)
+        .map(|i| {
+            (2.0 * std::f64::consts::PI * 1000.0 * i as f64 / sample_rate as f64).sin() as f32 * 0.1
+        })
         .collect();
 
     let mut output = vec![0.0f32; num_samples];
@@ -35,14 +37,23 @@ fn main() -> Result<(), danji::DanjiError> {
     println!("Duration: {:.1} s", duration_secs);
     println!("Samples: {}", num_samples);
     println!("Processing time: {:.3} s", elapsed.as_secs_f64());
-    println!("Samples per second: {:.0}", num_samples as f64 / elapsed.as_secs_f64());
+    println!(
+        "Samples per second: {:.0}",
+        num_samples as f64 / elapsed.as_secs_f64()
+    );
     println!("Real-time ratio: {:.2}x", realtime_ratio);
     println!("Time per sample: {:.2} us", ms_per_sample * 1000.0);
 
     if realtime_ratio >= 1.0 {
-        println!("STATUS: REALTIME (can process {}x faster than realtime)", realtime_ratio);
+        println!(
+            "STATUS: REALTIME (can process {}x faster than realtime)",
+            realtime_ratio
+        );
     } else {
-        println!("STATUS: NOT REALTIME (needs {:.1}x speedup)", 1.0 / realtime_ratio);
+        println!(
+            "STATUS: NOT REALTIME (needs {:.1}x speedup)",
+            1.0 / realtime_ratio
+        );
     }
 
     Ok(())

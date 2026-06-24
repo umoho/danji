@@ -9,7 +9,13 @@ pub struct TriodeParams {
 
 impl TriodeParams {
     pub const fn new(mu: f64, ex: f64, kg1: f64, kp: f64, kvb: f64) -> Self {
-        Self { mu, ex, kg1, kp, kvb }
+        Self {
+            mu,
+            ex,
+            kg1,
+            kp,
+            kvb,
+        }
     }
 
     /// 12AX7 (ECC83) - 高增益前级管

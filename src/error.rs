@@ -16,7 +16,11 @@ impl fmt::Display for DanjiError {
         match self {
             DanjiError::GpuInit(msg) => write!(f, "GPU init failed: {}", msg),
             DanjiError::Diverged { sample, iterations } => {
-                write!(f, "Diverged at sample {} after {} iterations", sample, iterations)
+                write!(
+                    f,
+                    "Diverged at sample {} after {} iterations",
+                    sample, iterations
+                )
             }
             DanjiError::SingularMatrix { node } => {
                 write!(f, "Singular matrix at node {}", node)

@@ -10,7 +10,9 @@ pub fn plate_current(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
         (vp / params.kp) * (1.0 + arg.exp()).ln()
     };
 
-    if e1 <= 0.0 { return 0.0; }
+    if e1 <= 0.0 {
+        return 0.0;
+    }
 
     let e1_pow = e1.powf(params.ex);
     let e1_pow_m1 = e1.powf(params.ex - 1.0);
@@ -100,7 +102,12 @@ mod tests {
         let p_au7 = TriodeParams::new_12au7();
         let ip_ax7 = plate_current(250.0, -2.0, &p_ax7);
         let ip_au7 = plate_current(250.0, -2.0, &p_au7);
-        assert!(ip_au7 > ip_ax7, "12AU7 Ip({}) should > 12AX7 Ip({})", ip_au7, ip_ax7);
+        assert!(
+            ip_au7 > ip_ax7,
+            "12AU7 Ip({}) should > 12AX7 Ip({})",
+            ip_au7,
+            ip_ax7
+        );
     }
 
     #[test]

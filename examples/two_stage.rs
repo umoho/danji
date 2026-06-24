@@ -45,7 +45,11 @@ fn main() -> Result<(), danji::DanjiError> {
     println!("Input: 10 mV peak, 1 kHz");
     println!("Output DC offset: {:.1} V", dc);
     println!("Output AC peak: {:.3} V", ac_max);
-    println!("Total gain: {:.0}x ({:.1} dB)", gain, 20.0 * (gain as f64).log10());
+    println!(
+        "Total gain: {:.0}x ({:.1} dB)",
+        gain,
+        20.0 * (gain as f64).log10()
+    );
 
     Ok(())
 }

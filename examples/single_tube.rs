@@ -22,14 +22,26 @@ fn main() -> Result<(), danji::DanjiError> {
     let settle = 10000;
     let steady: Vec<f32> = output.iter().skip(settle).copied().collect();
     let dc_offset: f32 = steady.iter().sum::<f32>() / steady.len() as f32;
-    let ac_max = steady.iter().map(|x| (x - dc_offset).abs()).fold(0.0f32, f32::max);
-    let ac_rms = (steady.iter().map(|x| ((x - dc_offset) * (x - dc_offset)) as f64).sum::<f64>() / steady.len() as f64).sqrt();
+    let ac_max = steady
+        .iter()
+        .map(|x| (x - dc_offset).abs())
+        .fold(0.0f32, f32::max);
+    let ac_rms = (steady
+        .iter()
+        .map(|x| ((x - dc_offset) * (x - dc_offset)) as f64)
+        .sum::<f64>()
+        / steady.len() as f64)
+        .sqrt();
 
     println!("Input amplitude: {:.4} V", amplitude);
     println!("DC offset (Vout): {:.1} V", dc_offset);
     println!("AC peak: {:.3} V", ac_max);
     println!("AC RMS: {:.3} V", ac_rms);
-    println!("Gain: {:.0}x ({:.1} dB)", ac_max / amplitude, 20.0 * (ac_max / amplitude).log10());
+    println!(
+        "Gain: {:.0}x ({:.1} dB)",
+        ac_max / amplitude,
+        20.0 * (ac_max / amplitude).log10()
+    );
     println!("Sample count: {}", sim.sample_count());
 
     Ok(())

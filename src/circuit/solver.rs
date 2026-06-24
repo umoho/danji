@@ -140,8 +140,8 @@ impl CircuitSolver {
             self.solve_linear()?;
 
             let mut max_delta = 0.0;
-            for j in 0..n {
-                let d = (self.v[j] - v_old[j]).abs();
+            for (vj, v_oldj) in self.v[..n].iter().zip(v_old[..n].iter()) {
+                let d = (vj - v_oldj).abs();
                 if d > max_delta {
                     max_delta = d;
                 }
@@ -152,9 +152,13 @@ impl CircuitSolver {
             }
         }
 
-        Err(DanjiError::Diverged { sample: 0, iterations: MAX_ITER })
+        Err(DanjiError::Diverged {
+            sample: 0,
+            iterations: MAX_ITER,
+        })
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn solve_linear(&mut self) -> Result<(), DanjiError> {
         let n = self.num_nodes;
         let mut a = self.g;
@@ -201,5 +205,9 @@ impl CircuitSolver {
 
 #[inline]
 fn safety_factor(vpk: f64) -> f64 {
-    if vpk < 0.0 { 0.0 } else { 1.0 }
+    if vpk < 0.0 {
+        0.0
+    } else {
+        1.0
+    }
 }

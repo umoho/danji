@@ -23,7 +23,12 @@ pub struct Capacitor {
 
 impl Capacitor {
     pub fn new(a: NodeId, b: NodeId, farads: f64) -> Self {
-        Self { a, b, farads, v_prev: 0.0 }
+        Self {
+            a,
+            b,
+            farads,
+            v_prev: 0.0,
+        }
     }
 }
 
@@ -37,7 +42,12 @@ pub struct Inductor {
 
 impl Inductor {
     pub fn new(a: NodeId, b: NodeId, henrys: f64) -> Self {
-        Self { a, b, henrys, i_prev: 0.0 }
+        Self {
+            a,
+            b,
+            henrys,
+            i_prev: 0.0,
+        }
     }
 }
 

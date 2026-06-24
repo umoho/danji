@@ -56,8 +56,19 @@ impl SimConfig {
         self
     }
 
-    pub fn add_triode(&mut self, plate: NodeId, grid: NodeId, cathode: NodeId, params_idx: usize) -> &mut Self {
-        self.triodes.push(TriodeInstance { plate, grid, cathode, params_idx });
+    pub fn add_triode(
+        &mut self,
+        plate: NodeId,
+        grid: NodeId,
+        cathode: NodeId,
+        params_idx: usize,
+    ) -> &mut Self {
+        self.triodes.push(TriodeInstance {
+            plate,
+            grid,
+            cathode,
+            params_idx,
+        });
         self
     }
 
@@ -119,7 +130,8 @@ impl Simulator {
         let h = 1.0 / fs;
         let circuit_def = self.config.to_circuit_def();
 
-        self.solver.solve(&circuit_def, &self.triode_params, h, input as f64)?;
+        self.solver
+            .solve(&circuit_def, &self.triode_params, h, input as f64)?;
 
         for cap in &mut self.config.capacitors {
             let a = cap.a.0;
@@ -141,7 +153,11 @@ impl Simulator {
         self.sample_count += 1;
 
         let out = self.config.output_node.0;
-        Ok(if out > 0 { self.solver.v[out] as f32 } else { 0.0 })
+        Ok(if out > 0 {
+            self.solver.v[out] as f32
+        } else {
+            0.0
+        })
     }
 
     pub fn process_buffer(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), DanjiError> {
@@ -171,7 +187,11 @@ impl Simulator {
 
     pub fn node_voltage(&self, node: NodeId) -> f32 {
         let n = node.0;
-        if n < self.solver.v.len() { self.solver.v[n] as f32 } else { 0.0 }
+        if n < self.solver.v.len() {
+            self.solver.v[n] as f32
+        } else {
+            0.0
+        }
     }
 }
 
@@ -191,14 +211,27 @@ pub fn single_triode_config(
     let bplus_node = NodeId(4);
 
     let mut config = SimConfig::new(sample_rate, 5);
-    config.resistors.push(Resistor::new(plate, bplus_node, plate_resistor));
-    config.resistors.push(Resistor::new(cathode, gnd, cathode_resistor));
-    config.resistors.push(Resistor::new(grid, gnd, grid_resistor));
+    config
+        .resistors
+        .push(Resistor::new(plate, bplus_node, plate_resistor));
+    config
+        .resistors
+        .push(Resistor::new(cathode, gnd, cathode_resistor));
+    config
+        .resistors
+        .push(Resistor::new(grid, gnd, grid_resistor));
     config.resistors.push(Resistor::new(bplus_node, gnd, 1e6));
     if cathode_capacitor > 0.0 {
-        config.capacitors.push(Capacitor::new(cathode, gnd, cathode_capacitor));
+        config
+            .capacitors
+            .push(Capacitor::new(cathode, gnd, cathode_capacitor));
     }
-    config.triodes.push(TriodeInstance { plate, grid, cathode, params_idx: 0 });
+    config.triodes.push(TriodeInstance {
+        plate,
+        grid,
+        cathode,
+        params_idx: 0,
+    });
     config.input_node = grid;
     config.output_node = plate;
     config.bplus_node = bplus_node;
