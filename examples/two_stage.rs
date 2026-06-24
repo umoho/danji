@@ -1,6 +1,7 @@
 use danji::{single_triode_config, Simulator, TriodeParams};
 
 fn main() -> Result<(), danji::DanjiError> {
+    env_logger::init();
     let sr = 44100u32;
 
     let cfg1 = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0);

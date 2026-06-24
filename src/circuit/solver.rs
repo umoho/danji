@@ -5,6 +5,7 @@ use crate::tube::diode;
 use crate::tube::diode::DiodeParams;
 use crate::tube::params::TriodeParams;
 use crate::tube::triode;
+use log::{debug, error, warn};
 
 const MAX_ITER: usize = 50;
 const TOL: f64 = 1e-9;
@@ -183,11 +184,15 @@ impl CircuitSolver {
                 }
             }
             if max_delta < TOL {
+                if _iter > 10 {
+                    debug!("solver converged in {} iterations, max_delta={:.2e}", _iter, max_delta);
+                }
                 self.v_prev = self.v;
                 return Ok(());
             }
         }
 
+        warn!("solver diverged after {} iterations", MAX_ITER);
         Err(DanjiError::Diverged {
             sample: 0,
             iterations: MAX_ITER,
@@ -211,6 +216,7 @@ impl CircuitSolver {
                 }
             }
             if max_val < 1e-40 {
+                error!("singular matrix at column {}, pivot={:.2e}", col, max_val);
                 return Err(DanjiError::SingularMatrix { node: col });
             }
             if max_row != col {

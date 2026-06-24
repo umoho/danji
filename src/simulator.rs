@@ -4,6 +4,7 @@ use crate::circuit::solver::CircuitSolver;
 use crate::error::DanjiError;
 use crate::tube::diode::DiodeParams;
 use crate::tube::params::TriodeParams;
+use log::{debug, info};
 
 pub struct Simulator {
     config: SimConfig,
@@ -129,6 +130,15 @@ impl Simulator {
         diode_params: Vec<DiodeParams>,
     ) -> Self {
         let solver = CircuitSolver::new(config.num_nodes);
+        info!(
+            "create simulator: {} nodes, {} R, {} C, {} L, {} triodes, {} diodes",
+            config.num_nodes,
+            config.resistors.len(),
+            config.capacitors.len(),
+            config.inductors.len(),
+            config.triodes.len(),
+            config.diodes.len(),
+        );
         Self {
             config,
             solver,
@@ -139,6 +149,7 @@ impl Simulator {
     }
 
     pub fn reset(&mut self) {
+        debug!("simulator reset after {} samples", self.sample_count);
         self.solver.reset();
         for cap in &mut self.config.capacitors {
             cap.v_prev = 0.0;

@@ -13,6 +13,7 @@ fn power_supply_config(sr: u32) -> SimConfig {
 }
 
 fn main() -> Result<(), danji::DanjiError> {
+    env_logger::init();
     let sr = 44100u32;
     let num_samples = sr as usize;
 

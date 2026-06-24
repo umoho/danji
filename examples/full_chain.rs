@@ -1,6 +1,7 @@
 use danji::{single_triode_config, SimConfig, Simulator, TriodeParams, DiodeParams, NodeId};
 
 fn main() -> Result<(), danji::DanjiError> {
+    env_logger::init();
     let sr = 44100u32;
     let n = sr as usize;
 
