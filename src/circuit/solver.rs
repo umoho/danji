@@ -3,7 +3,9 @@ use crate::circuit::node::NodeId;
 use crate::error::DanjiError;
 use crate::tube::diode;
 use crate::tube::diode::DiodeParams;
+use crate::tube::params::PentodeParams;
 use crate::tube::params::TriodeParams;
+use crate::tube::pentode;
 use crate::tube::triode;
 use log::{debug, error, warn};
 
@@ -27,8 +29,8 @@ impl CircuitSolver {
             i: [0.0; MAX_NODES],
             v: [0.0; MAX_NODES],
             v_prev: [0.0; MAX_NODES],
-        }
-    }
+                }
+            }
 
     pub fn reset(&mut self) {
         self.v = [0.0; MAX_NODES];
@@ -39,6 +41,7 @@ impl CircuitSolver {
         &mut self,
         circuit: &CircuitDef,
         triode_params: &[TriodeParams],
+        pentode_params: &[PentodeParams],
         diode_params: &[DiodeParams],
         h: f64,
         vin: f64,
@@ -211,6 +214,52 @@ impl CircuitSolver {
                     }
                     self.g[c][c] += gp + gm;
                     self.i[c] += iconst;
+                }
+            }
+
+            for p in &circuit.pentodes {
+                let pl = p.plate.0;
+                let g = p.grid.0;
+                let c = p.cathode.0;
+                let s = p.screen.0;
+                let params = &pentode_params[p.params_idx];
+                let vp = if pl > 0 { self.v[pl] } else { 0.0 };
+                let vg = if g > 0 { self.v[g] } else { 0.0 };
+                let vc = if c > 0 { self.v[c] } else { 0.0 };
+                let vs = if s > 0 { self.v[s] } else { 0.0 };
+
+                let ip = pentode::plate_current(vp, vg, vs, vc, params);
+                let ig = pentode::screen_current(vg, vs, vc, params);
+                let gp = pentode::dip_dvp(vp, vg, vs, vc, params);
+                let gm1 = pentode::dip_dvg1(vp, vg, vs, vc, params);
+                let gm2 = pentode::dip_dvg2(vp, vg, vs, vc, params);
+                let gc = -(gp + gm1 + gm2);
+                let gs = pentode::dig2_dvg2(vp, vg, vs, vc, params);
+                let vpk = vp - vc;
+                let vgk = vg - vc;
+                let vsk = vs - vc;
+
+                let const_p = ip - gp * vpk - gm1 * vgk - gm2 * vsk;
+                let const_s = ig - gs * vsk;
+
+                if pl > 0 {
+                    self.g[pl][pl] += gp;
+                    if g > 0 { self.g[pl][g] += gm1; }
+                    if s > 0 { self.g[pl][s] += gm2; }
+                    if c > 0 { self.g[pl][c] += gc; }
+                    self.i[pl] -= const_p;
+                }
+                if s > 0 {
+                    self.g[s][s] += gs;
+                    if c > 0 { self.g[s][c] -= gs; }
+                    self.i[s] -= const_s;
+                }
+                if c > 0 {
+                    self.g[c][pl] -= gp;
+                    if g > 0 { self.g[c][g] -= gm1; }
+                    if s > 0 { self.g[c][s] -= gm2 + gs; }
+                    self.g[c][c] += gp + gm1 + gm2 + gs;
+                    self.i[c] += const_p + const_s;
                 }
             }
 

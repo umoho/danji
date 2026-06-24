@@ -22,7 +22,7 @@ fn main() -> Result<(), danji::DanjiError> {
         .output(plate)
         .bplus(bplus, 350.0);
 
-    let mut sim = Simulator::new(cfg, vec![TriodeParams::new_12au7()], vec![]);
+    let mut sim = Simulator::new(cfg, vec![TriodeParams::new_12au7()], vec![], vec![]);
 
     for _ in 0..5000 {
         sim.process_sample(0.0)?;

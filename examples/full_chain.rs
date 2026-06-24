@@ -17,7 +17,7 @@ fn main() -> Result<(), danji::DanjiError> {
         .input(ac_n)
         .output(bplus);
 
-    let mut psu = Simulator::new(psu_cfg, vec![], vec![DiodeParams::new_5ar4()]);
+    let mut psu = Simulator::new(psu_cfg, vec![], vec![], vec![DiodeParams::new_5ar4()]);
 
     let mut bp_voltage = vec![0.0f32; n];
     for (i, v) in bp_voltage.iter_mut().enumerate() {
@@ -30,8 +30,8 @@ fn main() -> Result<(), danji::DanjiError> {
 
     // --- two amplifier stages ---
     let stage_cfg = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, bp_dc as f64);
-    let mut stage1 = Simulator::new(stage_cfg.clone(), vec![TriodeParams::new_12ax7()], vec![]);
-    let mut stage2 = Simulator::new(stage_cfg, vec![TriodeParams::new_12ax7()], vec![]);
+    let mut stage1 = Simulator::new(stage_cfg.clone(), vec![TriodeParams::new_12ax7()], vec![], vec![]);
+    let mut stage2 = Simulator::new(stage_cfg, vec![TriodeParams::new_12ax7()], vec![], vec![]);
 
     // --- tone control: simple RC shelving filters ---
     let mut tone_cfg = SimConfig::new(sr, 4);
@@ -43,7 +43,7 @@ fn main() -> Result<(), danji::DanjiError> {
         .add_resistor(t_out, gnd, 100_000.0)
         .input(t_in)
         .output(t_out);
-    let mut tone = Simulator::new(tone_cfg, vec![], vec![]);
+    let mut tone = Simulator::new(tone_cfg, vec![], vec![], vec![]);
 
     // --- warmup stages with average B+ ---
     for _ in 0..2000 {

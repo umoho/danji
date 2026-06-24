@@ -104,6 +104,15 @@ pub struct DiodeInstance {
     pub params_idx: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct PentodeInstance {
+    pub plate: NodeId,
+    pub grid: NodeId,
+    pub cathode: NodeId,
+    pub screen: NodeId,
+    pub params_idx: usize,
+}
+
 pub const MAX_NODES: usize = 30;
 
 #[derive(Debug, Clone)]
@@ -114,6 +123,7 @@ pub struct CircuitDef {
     pub inductors: Vec<Inductor>,
     pub coupled_inductors: Vec<CoupledInductor>,
     pub triodes: Vec<TriodeInstance>,
+    pub pentodes: Vec<PentodeInstance>,
     pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,
     pub output_node: NodeId,

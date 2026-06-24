@@ -48,7 +48,7 @@ fn main() -> Result<(), danji::DanjiError> {
     let n = sr as usize * 2;
 
     run_psu(
-        &mut Simulator::new(crc_config(sr), vec![], vec![DiodeParams::new_5ar4()]),
+        &mut Simulator::new(crc_config(sr), vec![], vec![], vec![DiodeParams::new_5ar4()]),
         sr,
         n,
         "CRC (R=100Ω)",

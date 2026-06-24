@@ -4,7 +4,7 @@ use std::time::Instant;
 fn bench_single(sr: u32, duration_secs: f64) -> f64 {
     let n = (sr as f64 * duration_secs) as usize;
     let cfg = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0);
-    let mut sim = Simulator::new(cfg, vec![TriodeParams::new_12ax7()], vec![]);
+    let mut sim = Simulator::new(cfg, vec![TriodeParams::new_12ax7()], vec![], vec![]);
     let input: Vec<f32> = (0..n)
         .map(|i| (2.0 * std::f64::consts::PI * 1000.0 * i as f64 / sr as f64).sin() as f32 * 0.01)
         .collect();
@@ -20,8 +20,8 @@ fn bench_two_stage(sr: u32, duration_secs: f64) -> f64 {
     let n = (sr as f64 * duration_secs) as usize;
     let cfg1 = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0);
     let cfg2 = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0);
-    let mut s1 = Simulator::new(cfg1, vec![TriodeParams::new_12ax7()], vec![]);
-    let mut s2 = Simulator::new(cfg2, vec![TriodeParams::new_12ax7()], vec![]);
+    let mut s1 = Simulator::new(cfg1, vec![TriodeParams::new_12ax7()], vec![], vec![]);
+    let mut s2 = Simulator::new(cfg2, vec![TriodeParams::new_12ax7()], vec![], vec![]);
 
     for _ in 0..warmup { s1.process_sample(0.0).unwrap(); }
     for _ in 0..warmup { s2.process_sample(0.0).unwrap(); }
@@ -53,7 +53,7 @@ fn bench_chain(sr: u32, duration_secs: f64) -> f64 {
     psu_cfg.add_diode(ac_n, b1, 0).add_capacitor(b1, gnd, 47e-6)
            .add_resistor(b1, bplus, 100.0).add_capacitor(bplus, gnd, 47e-6)
            .add_resistor(bplus, gnd, 220e3).input(ac_n).output(bplus);
-    let mut psu = Simulator::new(psu_cfg, vec![], vec![DiodeParams::new_5ar4()]);
+    let mut psu = Simulator::new(psu_cfg, vec![], vec![], vec![DiodeParams::new_5ar4()]);
 
     let mut bp = vec![0.0f32; n];
     for (i, v) in bp.iter_mut().enumerate() {
@@ -63,8 +63,8 @@ fn bench_chain(sr: u32, duration_secs: f64) -> f64 {
     }
 
     let sc = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 0.0);
-    let mut s1 = Simulator::new(sc.clone(), vec![TriodeParams::new_12ax7()], vec![]);
-    let mut s2 = Simulator::new(sc, vec![TriodeParams::new_12ax7()], vec![]);
+    let mut s1 = Simulator::new(sc.clone(), vec![TriodeParams::new_12ax7()], vec![], vec![]);
+    let mut s2 = Simulator::new(sc, vec![TriodeParams::new_12ax7()], vec![], vec![]);
 
     for _ in 0..warmup { s1.process_sample(0.0).unwrap(); }
     for _ in 0..warmup { s2.process_sample(0.0).unwrap(); }

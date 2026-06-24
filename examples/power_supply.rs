@@ -18,7 +18,7 @@ fn main() -> Result<(), danji::DanjiError> {
     let num_samples = sr as usize;
 
     let cfg = power_supply_config(sr);
-    let mut sim = Simulator::new(cfg, vec![], vec![DiodeParams::new_5ar4()]);
+    let mut sim = Simulator::new(cfg, vec![], vec![], vec![DiodeParams::new_5ar4()]);
 
     let mut output = vec![0.0f32; num_samples];
     let mut input = vec![0.0f32; num_samples];

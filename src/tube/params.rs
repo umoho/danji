@@ -58,3 +58,44 @@ impl TriodeParams {
         Self::new(8.8, 1.35, 730.0, 32.0, 16.0)
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct PentodeParams {
+    pub mu: f64,
+    pub ex: f64,
+    pub kg1: f64,
+    pub kg2: f64,
+    pub kp: f64,
+    pub kvb: f64,
+}
+
+impl PentodeParams {
+    pub const fn new(mu: f64, ex: f64, kg1: f64, kg2: f64, kp: f64, kvb: f64) -> Self {
+        Self { mu, ex, kg1, kg2, kp, kvb }
+    }
+
+    /// EL84 / 6BQ5
+    pub const fn new_el84() -> Self {
+        Self::new(19.0, 1.35, 700.0, 2000.0, 100.0, 20.0)
+    }
+
+    /// EL34
+    pub const fn new_el34() -> Self {
+        Self::new(10.0, 1.35, 1200.0, 4500.0, 50.0, 15.0)
+    }
+
+    /// 6L6GC (pentode mode)
+    pub const fn new_6l6gc_pentode() -> Self {
+        Self::new(8.7, 1.35, 1460.0, 4500.0, 48.0, 12.0)
+    }
+
+    /// 6550 (pentode mode)
+    pub const fn new_6550_pentode() -> Self {
+        Self::new(7.9, 1.35, 890.0, 4200.0, 60.0, 24.0)
+    }
+
+    /// KT88 (pentode mode)
+    pub const fn new_kt88_pentode() -> Self {
+        Self::new(8.8, 1.35, 730.0, 4200.0, 32.0, 16.0)
+    }
+}

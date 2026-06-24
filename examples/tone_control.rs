@@ -26,6 +26,7 @@ fn main() -> Result<(), danji::DanjiError> {
         single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0),
         vec![TriodeParams::new_12ax7()],
         vec![],
+        vec![],
     );
     for _ in 0..2000 {
         std_amp.process_sample(0.0)?;
@@ -36,6 +37,7 @@ fn main() -> Result<(), danji::DanjiError> {
         single_triode_config(sr, 100_000.0, 1_500.0, 0.0, 1_000_000.0, 300.0),
         vec![TriodeParams::new_12ax7()],
         vec![],
+        vec![],
     );
     for _ in 0..2000 {
         nc_amp.process_sample(0.0)?;
@@ -45,6 +47,7 @@ fn main() -> Result<(), danji::DanjiError> {
     let mut hf_amp = Simulator::new(
         single_triode_config(sr, 100_000.0, 1_500.0, 0.22e-6, 1_000_000.0, 300.0),
         vec![TriodeParams::new_12ax7()],
+        vec![],
         vec![],
     );
     for _ in 0..2000 {

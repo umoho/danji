@@ -1,10 +1,12 @@
 use crate::circuit::element::{
-    Capacitor, CircuitDef, CoupledInductor, DiodeInstance, Inductor, Resistor, TriodeInstance,
+    Capacitor, CircuitDef, CoupledInductor, DiodeInstance, Inductor, PentodeInstance, Resistor,
+    TriodeInstance,
 };
 use crate::circuit::node::NodeId;
 use crate::circuit::solver::CircuitSolver;
 use crate::error::DanjiError;
 use crate::tube::diode::DiodeParams;
+use crate::tube::params::PentodeParams;
 use crate::tube::params::TriodeParams;
 use log::{debug, info};
 
@@ -12,6 +14,7 @@ pub struct Simulator {
     config: SimConfig,
     solver: CircuitSolver,
     triode_params: Vec<TriodeParams>,
+    pentode_params: Vec<PentodeParams>,
     diode_params: Vec<DiodeParams>,
     sample_count: usize,
 }
@@ -25,6 +28,7 @@ pub struct SimConfig {
     pub inductors: Vec<Inductor>,
     pub coupled_inductors: Vec<CoupledInductor>,
     pub triodes: Vec<TriodeInstance>,
+    pub pentodes: Vec<PentodeInstance>,
     pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,
     pub output_node: NodeId,
@@ -42,6 +46,7 @@ impl SimConfig {
             inductors: Vec::new(),
             coupled_inductors: Vec::new(),
             triodes: Vec::new(),
+            pentodes: Vec::new(),
             diodes: Vec::new(),
             input_node: NodeId(0),
             output_node: NodeId(0),
@@ -103,6 +108,24 @@ impl SimConfig {
         self
     }
 
+    pub fn add_pentode(
+        &mut self,
+        plate: NodeId,
+        grid: NodeId,
+        cathode: NodeId,
+        screen: NodeId,
+        params_idx: usize,
+    ) -> &mut Self {
+        self.pentodes.push(PentodeInstance {
+            plate,
+            grid,
+            cathode,
+            screen,
+            params_idx,
+        });
+        self
+    }
+
     pub fn add_diode(&mut self, anode: NodeId, cathode: NodeId, params_idx: usize) -> &mut Self {
         self.diodes.push(DiodeInstance {
             anode,
@@ -136,6 +159,7 @@ impl SimConfig {
             inductors: self.inductors.clone(),
             coupled_inductors: self.coupled_inductors.clone(),
             triodes: self.triodes.clone(),
+            pentodes: self.pentodes.clone(),
             diodes: self.diodes.clone(),
             input_node: self.input_node,
             output_node: self.output_node,
@@ -149,23 +173,26 @@ impl Simulator {
     pub fn new(
         config: SimConfig,
         triode_params: Vec<TriodeParams>,
+        pentode_params: Vec<PentodeParams>,
         diode_params: Vec<DiodeParams>,
     ) -> Self {
         let solver = CircuitSolver::new(config.num_nodes);
         info!(
-            "create simulator: {} nodes, {} R, {} C, {} L, {} CL, {} triodes, {} diodes",
+            "create simulator: {} nodes, {} R, {} C, {} L, {} CL, {} triodes, {} pentodes, {} diodes",
             config.num_nodes,
             config.resistors.len(),
             config.capacitors.len(),
             config.inductors.len(),
             config.coupled_inductors.len(),
             config.triodes.len(),
+            config.pentodes.len(),
             config.diodes.len(),
         );
         Self {
             config,
             solver,
             triode_params,
+            pentode_params,
             diode_params,
             sample_count: 0,
         }
@@ -195,6 +222,7 @@ impl Simulator {
         self.solver.solve(
             &circuit_def,
             &self.triode_params,
+            &self.pentode_params,
             &self.diode_params,
             h,
             input as f64,
