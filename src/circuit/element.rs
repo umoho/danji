@@ -28,6 +28,20 @@ impl Capacitor {
 }
 
 #[derive(Debug, Clone)]
+pub struct Inductor {
+    pub a: NodeId,
+    pub b: NodeId,
+    pub henrys: f64,
+    pub(crate) i_prev: f64,
+}
+
+impl Inductor {
+    pub fn new(a: NodeId, b: NodeId, henrys: f64) -> Self {
+        Self { a, b, henrys, i_prev: 0.0 }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct TriodeInstance {
     pub plate: NodeId,
     pub grid: NodeId,
@@ -35,13 +49,14 @@ pub struct TriodeInstance {
     pub params_idx: usize,
 }
 
-pub const MAX_NODES: usize = 20;
+pub const MAX_NODES: usize = 30;
 
 #[derive(Debug, Clone)]
 pub struct CircuitDef {
     pub num_nodes: usize,
     pub resistors: Vec<Resistor>,
     pub capacitors: Vec<Capacitor>,
+    pub inductors: Vec<Inductor>,
     pub triodes: Vec<TriodeInstance>,
     pub input_node: NodeId,
     pub output_node: NodeId,

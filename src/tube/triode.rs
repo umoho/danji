@@ -1,8 +1,8 @@
 use crate::tube::params::TriodeParams;
 
 pub fn plate_current(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
-    let vp_abs = vp.abs();
-    let inner = 1.0 / params.mu + vg / (params.kvb + vp_abs * vp_abs).sqrt();
+    let vp_sq = vp.abs();
+    let inner = 1.0 / params.mu + vg / (params.kvb + vp_sq * vp_sq).sqrt();
     let arg = params.kp * inner;
     let e1 = if arg > 700.0 {
         (vp / params.kp) * arg
@@ -10,23 +10,22 @@ pub fn plate_current(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
         (vp / params.kp) * (1.0 + arg.exp()).ln()
     };
 
-    let ip = if e1 > 0.0 {
-        (e1.powf(params.ex) + e1 * e1.powf(params.ex - 1.0)) / params.kg1
-    } else {
-        0.0
-    };
-    ip.max(0.0)
+    if e1 <= 0.0 { return 0.0; }
+
+    let e1_pow = e1.powf(params.ex);
+    let e1_pow_m1 = e1.powf(params.ex - 1.0);
+    (e1_pow + e1 * e1_pow_m1) / params.kg1
 }
 
 pub fn dip_dvp(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
-    let eps = 1e-6;
+    let eps = (1e-6_f64).max(vp.abs() * 1e-4);
     let ip0 = plate_current(vp - eps, vg, params);
     let ip1 = plate_current(vp + eps, vg, params);
     (ip1 - ip0) / (2.0 * eps)
 }
 
 pub fn dip_dvg(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
-    let eps = 1e-6;
+    let eps = (1e-6_f64).max(vg.abs() * 1e-4);
     let ip0 = plate_current(vp, vg - eps, params);
     let ip1 = plate_current(vp, vg + eps, params);
     (ip1 - ip0) / (2.0 * eps)

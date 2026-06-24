@@ -6,6 +6,7 @@ use crate::tube::triode;
 
 const MAX_ITER: usize = 50;
 const TOL: f64 = 1e-9;
+const VSRC_G: f64 = 1e6;
 
 pub struct CircuitSolver {
     pub num_nodes: usize,
@@ -75,14 +76,14 @@ impl CircuitSolver {
                     if b > 0 {
                         self.g[a][b] -= gc;
                     }
-                    self.i[a] += gc * (v_b - v_a);
+                    self.i[a] += gc * (v_a - v_b);
                 }
                 if b > 0 {
                     self.g[b][b] += gc;
                     if a > 0 {
                         self.g[b][a] -= gc;
                     }
-                    self.i[b] += gc * (v_a - v_b);
+                    self.i[b] += gc * (v_b - v_a);
                 }
             }
 
@@ -125,14 +126,14 @@ impl CircuitSolver {
 
             if circuit.bplus_node != NodeId(0) {
                 let bn = circuit.bplus_node.0;
-                self.g[bn][bn] += 1e12;
-                self.i[bn] += 1e12 * circuit.bplus_voltage;
+                self.g[bn][bn] += VSRC_G;
+                self.i[bn] += VSRC_G * circuit.bplus_voltage;
             }
 
             if circuit.input_node != NodeId(0) {
                 let in_n = circuit.input_node.0;
-                self.g[in_n][in_n] += 1e12;
-                self.i[in_n] += 1e12 * vin;
+                self.g[in_n][in_n] += VSRC_G;
+                self.i[in_n] += VSRC_G * vin;
             }
 
             let v_old = self.v;
