@@ -19,12 +19,12 @@ fn main() -> Result<(), danji::DanjiError> {
 
     // warmup
     {
-        let mut sim = Simulator::new(config.clone(), params.clone());
+        let mut sim = Simulator::new(config.clone(), params.clone(), vec![]);
         sim.process_buffer(&input, &mut output)?;
     }
 
     // benchmark
-    let mut sim = Simulator::new(config, params);
+    let mut sim = Simulator::new(config, params, vec![]);
     let start = Instant::now();
     sim.process_buffer(&input, &mut output)?;
     let elapsed = start.elapsed();

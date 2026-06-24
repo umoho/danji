@@ -5,7 +5,7 @@ fn main() -> Result<(), danji::DanjiError> {
 
     let config = single_triode_config(44100, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0);
     let params = vec![TriodeParams::new_12ax7()];
-    let mut sim = Simulator::new(config, params);
+    let mut sim = Simulator::new(config, params, vec![]);
 
     let duration_secs = 1.0;
     let num_samples = (44100.0 * duration_secs) as usize;

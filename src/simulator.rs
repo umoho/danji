@@ -1,13 +1,15 @@
-use crate::circuit::element::{Capacitor, CircuitDef, Inductor, Resistor, TriodeInstance};
+use crate::circuit::element::{Capacitor, CircuitDef, DiodeInstance, Inductor, Resistor, TriodeInstance};
 use crate::circuit::node::NodeId;
 use crate::circuit::solver::CircuitSolver;
 use crate::error::DanjiError;
+use crate::tube::diode::DiodeParams;
 use crate::tube::params::TriodeParams;
 
 pub struct Simulator {
     config: SimConfig,
     solver: CircuitSolver,
     triode_params: Vec<TriodeParams>,
+    diode_params: Vec<DiodeParams>,
     sample_count: usize,
 }
 
@@ -19,6 +21,7 @@ pub struct SimConfig {
     pub capacitors: Vec<Capacitor>,
     pub inductors: Vec<Inductor>,
     pub triodes: Vec<TriodeInstance>,
+    pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,
     pub output_node: NodeId,
     pub bplus_node: NodeId,
@@ -34,6 +37,7 @@ impl SimConfig {
             capacitors: Vec::new(),
             inductors: Vec::new(),
             triodes: Vec::new(),
+            diodes: Vec::new(),
             input_node: NodeId(0),
             output_node: NodeId(0),
             bplus_node: NodeId(0),
@@ -72,6 +76,20 @@ impl SimConfig {
         self
     }
 
+    pub fn add_diode(
+        &mut self,
+        anode: NodeId,
+        cathode: NodeId,
+        params_idx: usize,
+    ) -> &mut Self {
+        self.diodes.push(DiodeInstance {
+            anode,
+            cathode,
+            params_idx,
+        });
+        self
+    }
+
     pub fn input(&mut self, node: NodeId) -> &mut Self {
         self.input_node = node;
         self
@@ -95,6 +113,7 @@ impl SimConfig {
             capacitors: self.capacitors.clone(),
             inductors: self.inductors.clone(),
             triodes: self.triodes.clone(),
+            diodes: self.diodes.clone(),
             input_node: self.input_node,
             output_node: self.output_node,
             bplus_node: self.bplus_node,
@@ -104,12 +123,17 @@ impl SimConfig {
 }
 
 impl Simulator {
-    pub fn new(config: SimConfig, triode_params: Vec<TriodeParams>) -> Self {
+    pub fn new(
+        config: SimConfig,
+        triode_params: Vec<TriodeParams>,
+        diode_params: Vec<DiodeParams>,
+    ) -> Self {
         let solver = CircuitSolver::new(config.num_nodes);
         Self {
             config,
             solver,
             triode_params,
+            diode_params,
             sample_count: 0,
         }
     }
@@ -130,8 +154,13 @@ impl Simulator {
         let h = 1.0 / fs;
         let circuit_def = self.config.to_circuit_def();
 
-        self.solver
-            .solve(&circuit_def, &self.triode_params, h, input as f64)?;
+        self.solver.solve(
+            &circuit_def,
+            &self.triode_params,
+            &self.diode_params,
+            h,
+            input as f64,
+        )?;
 
         for cap in &mut self.config.capacitors {
             let a = cap.a.0;

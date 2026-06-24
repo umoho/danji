@@ -1,6 +1,8 @@
 use crate::circuit::element::{CircuitDef, MAX_NODES};
 use crate::circuit::node::NodeId;
 use crate::error::DanjiError;
+use crate::tube::diode;
+use crate::tube::diode::DiodeParams;
 use crate::tube::params::TriodeParams;
 use crate::tube::triode;
 
@@ -36,6 +38,7 @@ impl CircuitSolver {
         &mut self,
         circuit: &CircuitDef,
         triode_params: &[TriodeParams],
+        diode_params: &[DiodeParams],
         h: f64,
         vin: f64,
     ) -> Result<(), DanjiError> {
@@ -98,28 +101,45 @@ impl CircuitSolver {
                 let vpk = vp - vc;
                 let vgk = vg - vc;
 
-                let ip = triode::plate_current(vpk, vgk, params) * safety_factor(vpk);
+                let ip = triode::plate_current(vpk, vgk, params);
                 let gp = triode::dip_dvp(vpk, vgk, params);
                 let gm = triode::dip_dvg(vpk, vgk, params);
-
                 let iconst = ip - gp * vpk - gm * vgk;
 
                 if p > 0 {
                     self.g[p][p] += gp;
-                    if g > 0 {
-                        self.g[p][g] += gm;
-                    }
-                    if c > 0 {
-                        self.g[p][c] -= gp + gm;
-                    }
+                    if g > 0 { self.g[p][g] += gm; }
+                    if c > 0 { self.g[p][c] -= gp + gm; }
                     self.i[p] -= iconst;
                 }
                 if c > 0 {
                     self.g[c][p] -= gp;
-                    if g > 0 {
-                        self.g[c][g] -= gm;
-                    }
+                    if g > 0 { self.g[c][g] -= gm; }
                     self.g[c][c] += gp + gm;
+                    self.i[c] += iconst;
+                }
+            }
+
+            for d in &circuit.diodes {
+                let a = d.anode.0;
+                let c = d.cathode.0;
+                let params = &diode_params[d.params_idx];
+                let va = if a > 0 { self.v[a] } else { 0.0 };
+                let vc = if c > 0 { self.v[c] } else { 0.0 };
+                let vak = va - vc;
+
+                let id = diode::diode_current(vak, params);
+                let gd = diode::diode_conductance(vak, params);
+                let iconst = if vak > 0.0 { id - gd * vak } else { 0.0 };
+
+                if a > 0 {
+                    self.g[a][a] += gd;
+                    if c > 0 { self.g[a][c] -= gd; }
+                    self.i[a] -= iconst;
+                }
+                if c > 0 {
+                    self.g[c][a] -= gd;
+                    self.g[c][c] += gd;
                     self.i[c] += iconst;
                 }
             }
@@ -200,14 +220,5 @@ impl CircuitSolver {
         }
 
         Ok(())
-    }
-}
-
-#[inline]
-fn safety_factor(vpk: f64) -> f64 {
-    if vpk < 0.0 {
-        0.0
-    } else {
-        1.0
     }
 }

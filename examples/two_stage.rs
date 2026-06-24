@@ -6,8 +6,8 @@ fn main() -> Result<(), danji::DanjiError> {
     let cfg1 = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0);
     let cfg2 = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, 300.0);
 
-    let mut sim1 = Simulator::new(cfg1, vec![TriodeParams::new_12ax7()]);
-    let mut sim2 = Simulator::new(cfg2, vec![TriodeParams::new_12ax7()]);
+    let mut sim1 = Simulator::new(cfg1, vec![TriodeParams::new_12ax7()], vec![]);
+    let mut sim2 = Simulator::new(cfg2, vec![TriodeParams::new_12ax7()], vec![]);
 
     // warmup stage 1
     for _ in 0..3000 {
