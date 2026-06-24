@@ -52,6 +52,44 @@ impl Inductor {
 }
 
 #[derive(Debug, Clone)]
+pub struct CoupledInductor {
+    pub p_a: NodeId,
+    pub p_b: NodeId,
+    pub s_a: NodeId,
+    pub s_b: NodeId,
+    pub l_primary: f64,
+    pub l_secondary: f64,
+    pub coupling: f64,
+    pub(crate) i1_prev: f64,
+    pub(crate) i2_prev: f64,
+}
+
+impl CoupledInductor {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        p_a: NodeId,
+        p_b: NodeId,
+        s_a: NodeId,
+        s_b: NodeId,
+        l_primary: f64,
+        l_secondary: f64,
+        coupling: f64,
+    ) -> Self {
+        Self {
+            p_a,
+            p_b,
+            s_a,
+            s_b,
+            l_primary,
+            l_secondary,
+            coupling,
+            i1_prev: 0.0,
+            i2_prev: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct TriodeInstance {
     pub plate: NodeId,
     pub grid: NodeId,
@@ -74,6 +112,7 @@ pub struct CircuitDef {
     pub resistors: Vec<Resistor>,
     pub capacitors: Vec<Capacitor>,
     pub inductors: Vec<Inductor>,
+    pub coupled_inductors: Vec<CoupledInductor>,
     pub triodes: Vec<TriodeInstance>,
     pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,

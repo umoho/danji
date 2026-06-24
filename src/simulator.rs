@@ -1,4 +1,6 @@
-use crate::circuit::element::{Capacitor, CircuitDef, DiodeInstance, Inductor, Resistor, TriodeInstance};
+use crate::circuit::element::{
+    Capacitor, CircuitDef, CoupledInductor, DiodeInstance, Inductor, Resistor, TriodeInstance,
+};
 use crate::circuit::node::NodeId;
 use crate::circuit::solver::CircuitSolver;
 use crate::error::DanjiError;
@@ -21,6 +23,7 @@ pub struct SimConfig {
     pub resistors: Vec<Resistor>,
     pub capacitors: Vec<Capacitor>,
     pub inductors: Vec<Inductor>,
+    pub coupled_inductors: Vec<CoupledInductor>,
     pub triodes: Vec<TriodeInstance>,
     pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,
@@ -37,6 +40,7 @@ impl SimConfig {
             resistors: Vec::new(),
             capacitors: Vec::new(),
             inductors: Vec::new(),
+            coupled_inductors: Vec::new(),
             triodes: Vec::new(),
             diodes: Vec::new(),
             input_node: NodeId(0),
@@ -61,6 +65,28 @@ impl SimConfig {
         self
     }
 
+    pub fn add_coupled_inductor(
+        &mut self,
+        p_a: NodeId,
+        p_b: NodeId,
+        s_a: NodeId,
+        s_b: NodeId,
+        l_primary: f64,
+        l_secondary: f64,
+        coupling: f64,
+    ) -> &mut Self {
+        self.coupled_inductors.push(CoupledInductor::new(
+            p_a,
+            p_b,
+            s_a,
+            s_b,
+            l_primary,
+            l_secondary,
+            coupling,
+        ));
+        self
+    }
+
     pub fn add_triode(
         &mut self,
         plate: NodeId,
@@ -77,12 +103,7 @@ impl SimConfig {
         self
     }
 
-    pub fn add_diode(
-        &mut self,
-        anode: NodeId,
-        cathode: NodeId,
-        params_idx: usize,
-    ) -> &mut Self {
+    pub fn add_diode(&mut self, anode: NodeId, cathode: NodeId, params_idx: usize) -> &mut Self {
         self.diodes.push(DiodeInstance {
             anode,
             cathode,
@@ -113,6 +134,7 @@ impl SimConfig {
             resistors: self.resistors.clone(),
             capacitors: self.capacitors.clone(),
             inductors: self.inductors.clone(),
+            coupled_inductors: self.coupled_inductors.clone(),
             triodes: self.triodes.clone(),
             diodes: self.diodes.clone(),
             input_node: self.input_node,
@@ -131,11 +153,12 @@ impl Simulator {
     ) -> Self {
         let solver = CircuitSolver::new(config.num_nodes);
         info!(
-            "create simulator: {} nodes, {} R, {} C, {} L, {} triodes, {} diodes",
+            "create simulator: {} nodes, {} R, {} C, {} L, {} CL, {} triodes, {} diodes",
             config.num_nodes,
             config.resistors.len(),
             config.capacitors.len(),
             config.inductors.len(),
+            config.coupled_inductors.len(),
             config.triodes.len(),
             config.diodes.len(),
         );
@@ -156,6 +179,10 @@ impl Simulator {
         }
         for ind in &mut self.config.inductors {
             ind.i_prev = 0.0;
+        }
+        for ci in &mut self.config.coupled_inductors {
+            ci.i1_prev = 0.0;
+            ci.i2_prev = 0.0;
         }
         self.sample_count = 0;
     }
@@ -188,6 +215,35 @@ impl Simulator {
             let v_b = if b > 0 { self.solver.v[b] } else { 0.0 };
             let gl = ind.henrys.recip() * h;
             ind.i_prev += gl * (v_a - v_b);
+            // BE DC leakage: ~h*R/L where R is the effective parallel resistance
+            // Prevents unbounded DC accumulation in lossless BE model
+            let damping = (h * 5_000.0 / ind.henrys).min(0.5);
+            ind.i_prev *= 1.0 - damping;
+        }
+
+        for ci in &mut self.config.coupled_inductors {
+            let (pa, pb) = (ci.p_a.0, ci.p_b.0);
+            let (sa, sb) = (ci.s_a.0, ci.s_b.0);
+            let v_p = if pa > 0 { self.solver.v[pa] } else { 0.0 }
+                - if pb > 0 { self.solver.v[pb] } else { 0.0 };
+            let v_s = if sa > 0 { self.solver.v[sa] } else { 0.0 }
+                - if sb > 0 { self.solver.v[sb] } else { 0.0 };
+            let m = ci.coupling * (ci.l_primary * ci.l_secondary).sqrt();
+            let det = ci.l_primary * ci.l_secondary - m * m;
+            if det <= 0.0 {
+                continue;
+            }
+            let g11 = h * ci.l_secondary / det;
+            let g22 = h * ci.l_primary / det;
+            let g12 = -h * m / det;
+            // BE with Rdc damping: prevents unbounded DC accumulation
+            // dI/dt = V/L - R/L * I  →  I[n] = (1-hR/L)*I[n-1] + h/L*V[n]
+            let rdc_pri = 150.0;
+            let rdc_sec = 0.5;
+            let d1 = h * rdc_pri / ci.l_primary;
+            let d2 = h * rdc_sec / ci.l_secondary;
+            ci.i1_prev = (1.0 - d1) * ci.i1_prev + g11 * v_p + g12 * v_s;
+            ci.i2_prev = (1.0 - d2) * ci.i2_prev + g12 * v_p + g22 * v_s;
         }
 
         self.sample_count += 1;

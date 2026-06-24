@@ -1,14 +1,14 @@
-use danji::{SimConfig, Simulator, DiodeParams, NodeId};
+use danji::{DiodeParams, NodeId, SimConfig, Simulator};
 
 fn power_supply_config(sr: u32) -> SimConfig {
     let mut cfg = SimConfig::new(sr, 3);
     let (gnd, ac, bplus) = (NodeId(0), NodeId(1), NodeId(2));
 
-    cfg.add_diode(ac, bplus, 0)       // rectifier
-       .add_resistor(bplus, gnd, 220e3)  // bleeder + load
-       .add_capacitor(bplus, gnd, 47e-6) // reservoir cap
-       .input(ac)                        // AC input
-       .output(bplus);
+    cfg.add_diode(ac, bplus, 0) // rectifier
+        .add_resistor(bplus, gnd, 220e3) // bleeder + load
+        .add_capacitor(bplus, gnd, 47e-6) // reservoir cap
+        .input(ac) // AC input
+        .output(bplus);
     cfg
 }
 

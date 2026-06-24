@@ -97,13 +97,84 @@ impl CircuitSolver {
                 let gl = ind.henrys.recip() * h;
                 if a > 0 {
                     self.g[a][a] += gl;
-                    if b > 0 { self.g[a][b] -= gl; }
+                    if b > 0 {
+                        self.g[a][b] -= gl;
+                    }
                     self.i[a] += ind.i_prev;
                 }
                 if b > 0 {
                     self.g[b][b] += gl;
-                    if a > 0 { self.g[b][a] -= gl; }
+                    if a > 0 {
+                        self.g[b][a] -= gl;
+                    }
                     self.i[b] -= ind.i_prev;
+                }
+            }
+
+            for ci in &circuit.coupled_inductors {
+                let (pa, pb) = (ci.p_a.0, ci.p_b.0);
+                let (sa, sb) = (ci.s_a.0, ci.s_b.0);
+                let m = ci.coupling * (ci.l_primary * ci.l_secondary).sqrt();
+                let det = ci.l_primary * ci.l_secondary - m * m;
+                if det <= 1e-30 {
+                    warn!("coupled inductor det={:.2e} <= 0 (k={})", det, ci.coupling);
+                    continue;
+                }
+                let g11 = h * ci.l_secondary / det;
+                let g22 = h * ci.l_primary / det;
+                let g12 = -h * m / det;
+
+                if pa > 0 {
+                    self.g[pa][pa] += g11;
+                    if pb > 0 {
+                        self.g[pa][pb] -= g11;
+                    }
+                    if sa > 0 {
+                        self.g[pa][sa] += g12;
+                    }
+                    if sb > 0 {
+                        self.g[pa][sb] -= g12;
+                    }
+                    self.i[pa] += ci.i1_prev;
+                }
+                if pb > 0 {
+                    self.g[pb][pb] += g11;
+                    if pa > 0 {
+                        self.g[pb][pa] -= g11;
+                    }
+                    if sa > 0 {
+                        self.g[pb][sa] -= g12;
+                    }
+                    if sb > 0 {
+                        self.g[pb][sb] += g12;
+                    }
+                    self.i[pb] -= ci.i1_prev;
+                }
+                if sa > 0 {
+                    self.g[sa][sa] += g22;
+                    if sb > 0 {
+                        self.g[sa][sb] -= g22;
+                    }
+                    if pa > 0 {
+                        self.g[sa][pa] += g12;
+                    }
+                    if pb > 0 {
+                        self.g[sa][pb] -= g12;
+                    }
+                    self.i[sa] += ci.i2_prev;
+                }
+                if sb > 0 {
+                    self.g[sb][sb] += g22;
+                    if sa > 0 {
+                        self.g[sb][sa] -= g22;
+                    }
+                    if pa > 0 {
+                        self.g[sb][pa] -= g12;
+                    }
+                    if pb > 0 {
+                        self.g[sb][pb] += g12;
+                    }
+                    self.i[sb] -= ci.i2_prev;
                 }
             }
 
@@ -125,13 +196,19 @@ impl CircuitSolver {
 
                 if p > 0 {
                     self.g[p][p] += gp;
-                    if g > 0 { self.g[p][g] += gm; }
-                    if c > 0 { self.g[p][c] -= gp + gm; }
+                    if g > 0 {
+                        self.g[p][g] += gm;
+                    }
+                    if c > 0 {
+                        self.g[p][c] -= gp + gm;
+                    }
                     self.i[p] -= iconst;
                 }
                 if c > 0 {
                     self.g[c][p] -= gp;
-                    if g > 0 { self.g[c][g] -= gm; }
+                    if g > 0 {
+                        self.g[c][g] -= gm;
+                    }
                     self.g[c][c] += gp + gm;
                     self.i[c] += iconst;
                 }
@@ -151,7 +228,9 @@ impl CircuitSolver {
 
                 if a > 0 {
                     self.g[a][a] += gd;
-                    if c > 0 { self.g[a][c] -= gd; }
+                    if c > 0 {
+                        self.g[a][c] -= gd;
+                    }
                     self.i[a] -= iconst;
                 }
                 if c > 0 {
@@ -185,7 +264,10 @@ impl CircuitSolver {
             }
             if max_delta < TOL {
                 if _iter > 10 {
-                    debug!("solver converged in {} iterations, max_delta={:.2e}", _iter, max_delta);
+                    debug!(
+                        "solver converged in {} iterations, max_delta={:.2e}",
+                        _iter, max_delta
+                    );
                 }
                 self.v_prev = self.v;
                 return Ok(());

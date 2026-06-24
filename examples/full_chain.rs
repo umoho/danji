@@ -1,4 +1,4 @@
-use danji::{single_triode_config, SimConfig, Simulator, TriodeParams, DiodeParams, NodeId};
+use danji::{single_triode_config, DiodeParams, NodeId, SimConfig, Simulator, TriodeParams};
 
 fn main() -> Result<(), danji::DanjiError> {
     env_logger::init();
@@ -8,12 +8,14 @@ fn main() -> Result<(), danji::DanjiError> {
     // --- power supply: 5AR4 + CRC (R=100Ω, 47µF+47µF) ---
     let mut psu_cfg = SimConfig::new(sr, 4);
     let (gnd, ac_n, b1, bplus) = (NodeId(0), NodeId(1), NodeId(2), NodeId(3));
-    psu_cfg.add_diode(ac_n, b1, 0)
-           .add_capacitor(b1, gnd, 47e-6)
-           .add_resistor(b1, bplus, 100.0)
-           .add_capacitor(bplus, gnd, 47e-6)
-           .add_resistor(bplus, gnd, 220e3)
-           .input(ac_n).output(bplus);
+    psu_cfg
+        .add_diode(ac_n, b1, 0)
+        .add_capacitor(b1, gnd, 47e-6)
+        .add_resistor(b1, bplus, 100.0)
+        .add_capacitor(bplus, gnd, 47e-6)
+        .add_resistor(bplus, gnd, 220e3)
+        .input(ac_n)
+        .output(bplus);
 
     let mut psu = Simulator::new(psu_cfg, vec![], vec![DiodeParams::new_5ar4()]);
 
@@ -34,11 +36,13 @@ fn main() -> Result<(), danji::DanjiError> {
     // --- tone control: simple RC shelving filters ---
     let mut tone_cfg = SimConfig::new(sr, 4);
     let (t_in, t_mid, t_out) = (NodeId(1), NodeId(2), NodeId(3));
-    tone_cfg.add_resistor(t_in, t_mid, 100_000.0)
-            .add_capacitor(t_mid, gnd, 330e-12)  // treble cut ~4.8kHz
-            .add_capacitor(t_in, t_out, 0.022e-6) // bass cut ~72Hz
-            .add_resistor(t_out, gnd, 100_000.0)
-            .input(t_in).output(t_out);
+    tone_cfg
+        .add_resistor(t_in, t_mid, 100_000.0)
+        .add_capacitor(t_mid, gnd, 330e-12) // treble cut ~4.8kHz
+        .add_capacitor(t_in, t_out, 0.022e-6) // bass cut ~72Hz
+        .add_resistor(t_out, gnd, 100_000.0)
+        .input(t_in)
+        .output(t_out);
     let mut tone = Simulator::new(tone_cfg, vec![], vec![]);
 
     // --- warmup stages with average B+ ---
@@ -90,7 +94,11 @@ fn main() -> Result<(), danji::DanjiError> {
     println!("Input: 10 mV peak, 1 kHz");
     println!("Output DC: {:.0} V", dc);
     println!("Output AC peak: {:.1} V", ac_max);
-    println!("Total gain: {:.0}x ({:.1} dB)", gain, 20.0 * (gain as f64).log10());
+    println!(
+        "Total gain: {:.0}x ({:.1} dB)",
+        gain,
+        20.0 * (gain as f64).log10()
+    );
     println!("Samples: {}", n);
 
     Ok(())
