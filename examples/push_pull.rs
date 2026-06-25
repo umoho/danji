@@ -4,10 +4,15 @@ use std::f64::consts::PI;
 const SR: u32 = 44100;
 
 fn test_phase_inverter() -> Result<(), danji::DanjiError> {
-    // 12AX7 long-tail pair phase inverter
     let num_nodes = 7;
     let (g, v1a_g, cath, v1a_p, v1b_g, v1b_p, b) = (
-        NodeId(0), NodeId(1), NodeId(2), NodeId(3), NodeId(4), NodeId(5), NodeId(6),
+        NodeId(0),
+        NodeId(1),
+        NodeId(2),
+        NodeId(3),
+        NodeId(4),
+        NodeId(5),
+        NodeId(6),
     );
 
     let mut cfg = SimConfig::new(SR, num_nodes);
@@ -61,14 +66,8 @@ fn test_phase_inverter() -> Result<(), danji::DanjiError> {
 
     let dc_a: f32 = vpa.iter().sum::<f32>() / vpa.len() as f32;
     let dc_b: f32 = vpb.iter().sum::<f32>() / vpb.len() as f32;
-    let ac_a: f32 = vpa
-        .iter()
-        .map(|x| (x - dc_a).abs())
-        .fold(0.0f32, f32::max);
-    let ac_b: f32 = vpb
-        .iter()
-        .map(|x| (x - dc_b).abs())
-        .fold(0.0f32, f32::max);
+    let ac_a: f32 = vpa.iter().map(|x| (x - dc_a).abs()).fold(0.0f32, f32::max);
+    let ac_b: f32 = vpb.iter().map(|x| (x - dc_b).abs()).fold(0.0f32, f32::max);
 
     let mut sum = 0.0f64;
     for (a, b) in vpa.iter().zip(vpb.iter()) {
@@ -78,157 +77,206 @@ fn test_phase_inverter() -> Result<(), danji::DanjiError> {
     println!("=== Phase Inverter AC (1kHz, 0.5Vpk input) ===");
     println!("V1a plate: DC={:.1}V  ACpk={:.3}V", dc_a, ac_a);
     println!("V1b plate: DC={:.1}V  ACpk={:.3}V", dc_b, ac_b);
-    println!(
-        "Phase: {}",
-        if sum < 0.0 { "INVERTED" } else { "SAME" }
-    );
+    println!("Phase: {}", if sum < 0.0 { "INVERTED" } else { "SAME" });
 
     Ok(())
 }
 
 fn test_full_push_pull() -> Result<(), danji::DanjiError> {
-    // Full push-pull: 12AX7 phase inverter → EL84×2 → OPT → 8Ω
+    // Two-simulator approach:
+    //   Sim1: 12AX7 long-tail pair phase inverter
+    //   Sim2: EL84 push-pull output stage
     //
-    // Nodes:
-    // 0:  gnd
-    // 1:  v1a_g    (12AX7 V1a grid, input)
-    // 2:  cath     (12AX7 shared cathode)
-    // 3:  v1a_p    (12AX7 V1a plate)
-    // 4:  v1b_g    (12AX7 V1b grid)
-    // 5:  v1b_p    (12AX7 V1b plate)
-    // 6:  el84a_g  (EL84 upper grid)
-    // 7:  el84a_k  (EL84 upper cathode)
-    // 8:  el84a_s  (EL84 upper screen)
-    // 9:  el84a_p  (EL84 upper plate)
-    // 10: el84b_g  (EL84 lower grid)
-    // 11: el84b_k  (EL84 lower cathode)
-    // 12: el84b_s  (EL84 lower screen)
-    // 13: el84b_p  (EL84 lower plate)
-    // 14: ct_bp   (transformer CT + B+)
-    // 15: spk      (speaker)
-    let num_nodes = 16;
-    let (
-        g, v1a_g, cath, v1a_p, v1b_g, v1b_p, el84a_g, el84a_k, el84a_s, el84a_p,
-        el84b_g, el84b_k, el84b_s, el84b_p, ct_bp, spk,
-    ) = (
-        NodeId(0), NodeId(1), NodeId(2), NodeId(3), NodeId(4), NodeId(5),
-        NodeId(6), NodeId(7), NodeId(8), NodeId(9),
-        NodeId(10), NodeId(11), NodeId(12), NodeId(13),
-        NodeId(14), NodeId(15),
+    // Coupling: external RC high-pass filter between stages
+    // (BE capacitors cannot block DC in the MNA netlist)
+
+    // --- Phase inverter (same as test_phase_inverter) ---
+    let pi_num = 7;
+    let (g, v1a_g, cath, v1a_p, v1b_g, v1b_p, pi_b) = (
+        NodeId(0),
+        NodeId(1),
+        NodeId(2),
+        NodeId(3),
+        NodeId(4),
+        NodeId(5),
+        NodeId(6),
     );
 
-    let mut cfg = SimConfig::new(SR, num_nodes);
-
-    cfg.add_resistor(v1b_g, g, 470_000.0)
+    let mut pi_cfg = SimConfig::new(SR, pi_num);
+    pi_cfg
+        .add_resistor(v1b_g, g, 470_000.0)
         .add_resistor(cath, g, 47_000.0)
-        .add_resistor(v1a_p, ct_bp, 100_000.0)
-        .add_resistor(v1b_p, ct_bp, 100_000.0)
-        .add_resistor(ct_bp, g, 1_000_000.0)
-        // Coupling caps from 12AX7 plates to EL84 grids
-        .add_capacitor(v1a_p, el84a_g, 0.022e-6)
-        .add_capacitor(v1b_p, el84b_g, 0.022e-6)
-        .add_resistor(el84a_g, g, 470_000.0)
-        .add_resistor(el84b_g, g, 470_000.0)
-        .add_resistor(el84a_k, g, 150.0)
-        .add_resistor(el84b_k, g, 150.0)
-        .add_resistor(el84a_s, ct_bp, 1_000.0)
-        .add_resistor(el84b_s, ct_bp, 1_000.0)
-        // Snubber: 47Ω from each EL84 plate to B+ provides a low-impedance
-        // DC path during warmup (prevents Vpk from going negative when
-        // EL84 grids are at 12AX7 plate potential through the coupling caps)
-        .add_resistor(el84a_p, ct_bp, 47.0)
-        .add_resistor(el84b_p, ct_bp, 47.0)
-        .add_coupled_inductor(el84a_p, ct_bp, spk, g, 2.5, 0.016, 0.95)
-        .add_coupled_inductor(el84b_p, ct_bp, spk, g, 2.5, 0.016, 0.95)
+        .add_resistor(v1a_p, pi_b, 100_000.0)
+        .add_resistor(v1b_p, pi_b, 100_000.0)
+        .add_resistor(pi_b, g, 1_000_000.0)
         .add_triode(v1a_p, v1a_g, cath, 0)
         .add_triode(v1b_p, v1b_g, cath, 0)
-        .add_pentode(el84a_p, el84a_g, el84a_k, el84a_s, 0)
-        .add_pentode(el84b_p, el84b_g, el84b_k, el84b_s, 0)
         .input(v1a_g)
-        .output(spk)
-        .bplus(ct_bp, 250.0);
+        .output(v1b_p)
+        .bplus(pi_b, 250.0);
 
-    let triode_params = vec![TriodeParams::new_12ax7()];
-    let pentode_params = vec![PentodeParams::new_el84()];
-    let mut sim = Simulator::new(cfg, triode_params, pentode_params, vec![]);
+    let mut pi = Simulator::new(pi_cfg, vec![TriodeParams::new_12ax7()], vec![], vec![]);
 
-    // Phase 1: ramp B+. The 47Ω snubber keeps EL84 plate voltage from
-    // going negative despite the grid being at 12AX7 plate potential.
-    // The coupling caps charge as the 12AX7 plates rise.
-    for i in 0..20000 {
-        let frac = (i as f64) / 20000.0;
-        sim.set_bplus(250.0 * frac);
-        sim.process_sample(0.0)?;
+    // --- Push-pull output stage (EL84×2 + OPT + speaker) ---
+    // Nodes:
+    // 0: gnd
+    // 1: el84a_g (upper grid, input)
+    // 2: el84a_k
+    // 3: el84a_s
+    // 4: el84a_p
+    // 5: el84b_g (lower grid, input2)
+    // 6: el84b_k
+    // 7: el84b_s
+    // 8: el84b_p
+    // 9: ct_bp (also output)
+    let op_num = 10;
+    let (eag, eak, eas, eap, ebg, ebk, ebs, ebp, ct) = (
+        NodeId(1),
+        NodeId(2),
+        NodeId(3),
+        NodeId(4),
+        NodeId(5),
+        NodeId(6),
+        NodeId(7),
+        NodeId(8),
+        NodeId(9),
+    );
+
+    let mut op_cfg = SimConfig::new(SR, op_num);
+    op_cfg
+        .add_resistor(eag, g, 470_000.0) // grid leak upper
+        .add_resistor(ebg, g, 470_000.0) // grid leak lower
+        .add_resistor(eak, g, 150.0) // cathode bias upper
+        .add_resistor(ebk, g, 150.0) // cathode bias lower
+        .add_resistor(eas, ct, 1_000.0) // screen resistor upper
+        .add_resistor(ebs, ct, 1_000.0) // screen resistor lower
+        .add_resistor(ct, g, 1_000_000.0) // B+ bleeder
+        // OPT: 100Ω DCR + 10H (same as pentode_stage)
+        .add_resistor(eap, ct, 100.0)
+        .add_inductor(eap, ct, 10.0)
+        .add_resistor(ebp, ct, 100.0)
+        .add_inductor(ebp, ct, 10.0)
+        .add_pentode(eap, eag, eak, eas, 0) // EL84 upper
+        .add_pentode(ebp, ebg, ebk, ebs, 0) // EL84 lower
+        .input(eag) // upper grid = input1
+        .input2(ebg) // lower grid = input2
+        .output(eap) // output = upper plate
+        .bplus(ct, 250.0);
+
+    let mut op = Simulator::new(op_cfg, vec![], vec![PentodeParams::new_el84()], vec![]);
+
+    // Warmup: both Simulators
+    for pi_ in 0..5000 {
+        pi.set_bplus(250.0 * (pi_ as f64) / 5000.0);
+        pi.process_sample(0.0)?;
     }
-    sim.set_bplus(250.0);
-
-    // Phase 2: settle. The EL84 grids discharge through 470kΩ grid leaks
-    // with τ = 10ms. After 50ms (2200 samples) they're near 0V.
-    for _ in 0..20000 {
-        sim.process_sample(0.0)?;
+    pi.set_bplus(250.0);
+    for _ in 0..5000 {
+        pi.process_sample(0.0)?;
     }
 
-    // Report DC bias
+    // Warmup output stage: set B+ immediately with longer idle
+    op.set_bplus(250.0);
+    op.set_input2(0.0);
+    for _ in 0..50000 {
+        op.set_input2(0.0);
+        op.process_sample(0.0)?;
+    }
+
     println!();
-    println!("=== Full Push-Pull DC Bias ===");
+    println!("=== Push-Pull DC Bias ===");
     println!(
-        "12AX7 V1a: Vg={:.2} Vk={:.2} Vp={:.2}",
-        sim.node_voltage(v1a_g),
-        sim.node_voltage(cath),
-        sim.node_voltage(v1a_p)
+        "12AX7 V1a: Vg=0.00 Vk={:.2} Vp={:.2}",
+        pi.node_voltage(cath),
+        pi.node_voltage(v1a_p)
     );
     println!(
-        "12AX7 V1b: Vg={:.2} Vk={:.2} Vp={:.2}",
-        sim.node_voltage(v1b_g),
-        sim.node_voltage(cath),
-        sim.node_voltage(v1b_p)
+        "12AX7 V1b: Vg=0.00 Vk={:.2} Vp={:.2}",
+        pi.node_voltage(cath),
+        pi.node_voltage(v1b_p)
     );
     println!(
         "EL84a: Vg={:.2} Vk={:.2} Vs={:.2} Vp={:.2}",
-        sim.node_voltage(el84a_g),
-        sim.node_voltage(el84a_k),
-        sim.node_voltage(el84a_s),
-        sim.node_voltage(el84a_p)
+        op.node_voltage(eag),
+        op.node_voltage(eak),
+        op.node_voltage(eas),
+        op.node_voltage(eap)
     );
     println!(
         "EL84b: Vg={:.2} Vk={:.2} Vs={:.2} Vp={:.2}",
-        sim.node_voltage(el84b_g),
-        sim.node_voltage(el84b_k),
-        sim.node_voltage(el84b_s),
-        sim.node_voltage(el84b_p)
+        op.node_voltage(ebg),
+        op.node_voltage(ebk),
+        op.node_voltage(ebs),
+        op.node_voltage(ebp)
     );
 
-    // AC test with 1kHz sine
+    // AC test: drive phase inverter, AC-couple to output stage
     let n = (SR as f64 * 0.5) as usize;
-    let mut output = vec![0.0f32; n];
+    let mut vpa_log = vec![0.0f32; n];
+    let mut vpb_log = vec![0.0f32; n];
+
+    // External RC high-pass (simulates coupling cap + grid leak)
+    let h = 1.0 / SR as f64;
+    let tau = 470_000.0 * 0.022e-6;
+    let alpha = 1.0 - (-h / tau).exp();
+    let mut dc_block_a = 0.0;
+    let mut dc_block_b = 0.0;
+
+    // Settle DC-block filters: run phase inverter with zero input to charge
+    // the filters to the steady-state plate DC voltage
+    // Keep output stage idling with zero inputs
+    for _ in 0..5000 {
+        let _ = pi.process_sample(0.0)?;
+        let vpa = pi.node_voltage(v1a_p) as f64;
+        let vpb = pi.node_voltage(v1b_p) as f64;
+        dc_block_a += alpha * (vpa - dc_block_a);
+        dc_block_b += alpha * (vpb - dc_block_b);
+        op.set_input2(0.0);
+        let _ = op.process_sample(0.0)?;
+    }
+    // Now dc_block_a ≈ Vpa_DC, dc_block_b ≈ Vpb_DC
 
     for i in 0..n {
         let t = i as f64 / SR as f64;
         let vin = (2.0 * PI * 1000.0 * t).sin() as f32 * 0.5;
-        output[i] = sim.process_sample(vin)?;
+
+        // Phase inverter step
+        let _ = pi.process_sample(vin)?;
+        let vpa = pi.node_voltage(v1a_p) as f64;
+        let vpb = pi.node_voltage(v1b_p) as f64;
+
+        // External AC coupling (DC block + RC filter)
+        let ac_a = vpa - dc_block_a;
+        dc_block_a += alpha * (vpa - dc_block_a);
+        let ac_b = vpb - dc_block_b;
+        dc_block_b += alpha * (vpb - dc_block_b);
+
+        // Output stage step with anti-phase drive
+        op.set_input2(ac_b as f64);
+        let _ = op.process_sample(ac_a as f32)?;
+        vpa_log[i] = op.node_voltage(eap);
+        vpb_log[i] = op.node_voltage(ebp);
     }
 
-    // Analyze: skip first 100ms for settling
+    // Analyze output: differential plate voltage → speaker
     let settle = (SR as f64 * 0.1) as usize;
-    let steady: &[f32] = &output[settle..];
+    let vpa_steady = &vpa_log[settle..];
+    let vpb_steady = &vpb_log[settle..];
+    let turns = (5000.0_f64 / 8.0).sqrt(); // 25:1 for push-pull half-primary
 
-    let spk_dc: f32 = steady.iter().sum::<f32>() / steady.len() as f32;
-    let spk_rms: f64 = (steady
-        .iter()
-        .map(|x| ((*x - spk_dc) * (*x - spk_dc)) as f64)
-        .sum::<f64>()
-        / steady.len() as f64)
-        .sqrt();
+    let dc_a: f32 = vpa_steady.iter().sum::<f32>() / vpa_steady.len() as f32;
+    let dc_b: f32 = vpb_steady.iter().sum::<f32>() / vpb_steady.len() as f32;
+    let mut spk_rms = 0.0f64;
+    for (a, b) in vpa_steady.iter().zip(vpb_steady.iter()) {
+        let diff = ((*a - dc_a) - (*b - dc_b)) as f64;
+        spk_rms += diff * diff;
+    }
+    spk_rms = (spk_rms / vpa_steady.len() as f64 / turns / turns).sqrt();
     let pwr_mw = spk_rms * spk_rms / 8.0 * 1000.0;
 
     println!();
-    println!("=== Full Push-Pull AC (1kHz, 0.5Vpk input) ===");
-    println!(
-        "Speaker: {:.1} mV RMS, {:.1} mW",
-        spk_rms * 1000.0,
-        pwr_mw
-    );
-    println!("Output DC offset: {:.2} V", spk_dc);
+    println!("=== Push-Pull AC (1kHz, 0.5Vpk input) ===");
+    println!("Speaker: {:.1} mV RMS, {:.1} mW", spk_rms * 1000.0, pwr_mw);
 
     Ok(())
 }
@@ -245,6 +293,9 @@ fn main() {
     }
 
     println!();
-    println!("Full push-pull: WIP (NaN convergence issue with BE coupled inductor");
-    println!("  during coupling cap warmup transient. See devlog.)");
+
+    match test_full_push_pull() {
+        Ok(()) => eprintln!("Full push-pull: OK"),
+        Err(e) => eprintln!("Full push-pull FAILED: {}", e),
+    }
 }

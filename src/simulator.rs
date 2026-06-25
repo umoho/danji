@@ -32,6 +32,8 @@ pub struct SimConfig {
     pub pentodes: Vec<PentodeInstance>,
     pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,
+    pub input2_node: NodeId,
+    pub input2_voltage: f64,
     pub output_node: NodeId,
     pub bplus_node: NodeId,
     pub bplus_voltage: f64,
@@ -51,6 +53,8 @@ impl SimConfig {
             pentodes: Vec::new(),
             diodes: Vec::new(),
             input_node: NodeId(0),
+            input2_node: NodeId(0),
+            input2_voltage: 0.0,
             output_node: NodeId(0),
             bplus_node: NodeId(0),
             bplus_voltage: 0.0,
@@ -173,6 +177,11 @@ impl SimConfig {
         self
     }
 
+    pub fn input2(&mut self, node: NodeId) -> &mut Self {
+        self.input2_node = node;
+        self
+    }
+
     fn to_circuit_def(&self) -> CircuitDef {
         CircuitDef {
             num_nodes: self.num_nodes,
@@ -185,6 +194,8 @@ impl SimConfig {
             pentodes: self.pentodes.clone(),
             diodes: self.diodes.clone(),
             input_node: self.input_node,
+            input2_node: self.input2_node,
+            input2_voltage: self.input2_voltage,
             output_node: self.output_node,
             bplus_node: self.bplus_node,
             bplus_voltage: self.bplus_voltage,
@@ -384,6 +395,10 @@ impl Simulator {
 
     pub fn set_bplus(&mut self, voltage: f64) {
         self.config.bplus_voltage = voltage;
+    }
+
+    pub fn set_input2(&mut self, voltage: f64) {
+        self.config.input2_voltage = voltage;
     }
 
     pub fn node_voltage(&self, node: NodeId) -> f32 {

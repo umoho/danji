@@ -396,6 +396,12 @@ impl CircuitSolver {
                 self.i[in_n] += VSRC_G * vin;
             }
 
+            if circuit.input2_node != NodeId(0) {
+                let in2_n = circuit.input2_node.0;
+                self.g[in2_n][in2_n] += VSRC_G;
+                self.i[in2_n] += VSRC_G * circuit.input2_voltage;
+            }
+
             let v_old = self.v;
             self.solve_linear()?;
 

@@ -179,6 +179,8 @@ pub struct CircuitDef {
     pub pentodes: Vec<PentodeInstance>,
     pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,
+    pub input2_node: NodeId,
+    pub input2_voltage: f64,
     pub output_node: NodeId,
     pub bplus_node: NodeId,
     pub bplus_voltage: f64,
