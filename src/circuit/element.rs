@@ -90,6 +90,61 @@ impl CoupledInductor {
 }
 
 #[derive(Debug, Clone)]
+pub struct CoupledInductor3 {
+    pub p1: NodeId,
+    pub ct: NodeId,
+    pub p2: NodeId,
+    pub s1: NodeId,
+    pub s2: NodeId,
+    pub l1: f64,
+    pub l2: f64,
+    pub l3: f64,
+    pub k12: f64,
+    pub k13: f64,
+    pub k23: f64,
+    #[allow(dead_code)]
+    pub(crate) i1_prev: f64,
+    #[allow(dead_code)]
+    pub(crate) i2_prev: f64,
+    #[allow(dead_code)]
+    pub(crate) i3_prev: f64,
+}
+
+impl CoupledInductor3 {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        p1: NodeId,
+        ct: NodeId,
+        p2: NodeId,
+        s1: NodeId,
+        s2: NodeId,
+        l1: f64,
+        l2: f64,
+        l3: f64,
+        k12: f64,
+        k13: f64,
+        k23: f64,
+    ) -> Self {
+        Self {
+            p1,
+            ct,
+            p2,
+            s1,
+            s2,
+            l1,
+            l2,
+            l3,
+            k12,
+            k13,
+            k23,
+            i1_prev: 0.0,
+            i2_prev: 0.0,
+            i3_prev: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct TriodeInstance {
     pub plate: NodeId,
     pub grid: NodeId,
@@ -122,6 +177,7 @@ pub struct CircuitDef {
     pub capacitors: Vec<Capacitor>,
     pub inductors: Vec<Inductor>,
     pub coupled_inductors: Vec<CoupledInductor>,
+    pub coupled_inductors3: Vec<CoupledInductor3>,
     pub triodes: Vec<TriodeInstance>,
     pub pentodes: Vec<PentodeInstance>,
     pub diodes: Vec<DiodeInstance>,

@@ -30,7 +30,12 @@ fn main() -> Result<(), danji::DanjiError> {
 
     // --- two amplifier stages ---
     let stage_cfg = single_triode_config(sr, 100_000.0, 1_500.0, 22e-6, 1_000_000.0, bp_dc as f64);
-    let mut stage1 = Simulator::new(stage_cfg.clone(), vec![TriodeParams::new_12ax7()], vec![], vec![]);
+    let mut stage1 = Simulator::new(
+        stage_cfg.clone(),
+        vec![TriodeParams::new_12ax7()],
+        vec![],
+        vec![],
+    );
     let mut stage2 = Simulator::new(stage_cfg, vec![TriodeParams::new_12ax7()], vec![], vec![]);
 
     // --- tone control: simple RC shelving filters ---

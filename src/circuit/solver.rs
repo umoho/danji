@@ -29,8 +29,8 @@ impl CircuitSolver {
             i: [0.0; MAX_NODES],
             v: [0.0; MAX_NODES],
             v_prev: [0.0; MAX_NODES],
-                }
-            }
+        }
+    }
 
     pub fn reset(&mut self) {
         self.v = [0.0; MAX_NODES];
@@ -181,6 +181,8 @@ impl CircuitSolver {
                 }
             }
 
+            // TODO: 3-winding coupled inductor (push-pull) - needs proper MNA stamp
+
             for tri in &circuit.triodes {
                 let p = tri.plate.0;
                 let g = tri.grid.0;
@@ -244,20 +246,32 @@ impl CircuitSolver {
 
                 if pl > 0 {
                     self.g[pl][pl] += gp;
-                    if g > 0 { self.g[pl][g] += gm1; }
-                    if s > 0 { self.g[pl][s] += gm2; }
-                    if c > 0 { self.g[pl][c] += gc; }
+                    if g > 0 {
+                        self.g[pl][g] += gm1;
+                    }
+                    if s > 0 {
+                        self.g[pl][s] += gm2;
+                    }
+                    if c > 0 {
+                        self.g[pl][c] += gc;
+                    }
                     self.i[pl] -= const_p;
                 }
                 if s > 0 {
                     self.g[s][s] += gs;
-                    if c > 0 { self.g[s][c] -= gs; }
+                    if c > 0 {
+                        self.g[s][c] -= gs;
+                    }
                     self.i[s] -= const_s;
                 }
                 if c > 0 {
                     self.g[c][pl] -= gp;
-                    if g > 0 { self.g[c][g] -= gm1; }
-                    if s > 0 { self.g[c][s] -= gm2 + gs; }
+                    if g > 0 {
+                        self.g[c][g] -= gm1;
+                    }
+                    if s > 0 {
+                        self.g[c][s] -= gm2 + gs;
+                    }
                     self.g[c][c] += gp + gm1 + gm2 + gs;
                     self.i[c] += const_p + const_s;
                 }

@@ -71,7 +71,14 @@ pub struct PentodeParams {
 
 impl PentodeParams {
     pub const fn new(mu: f64, ex: f64, kg1: f64, kg2: f64, kp: f64, kvb: f64) -> Self {
-        Self { mu, ex, kg1, kg2, kp, kvb }
+        Self {
+            mu,
+            ex,
+            kg1,
+            kg2,
+            kp,
+            kvb,
+        }
     }
 
     /// EL84 / 6BQ5

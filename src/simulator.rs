@@ -1,6 +1,6 @@
 use crate::circuit::element::{
-    Capacitor, CircuitDef, CoupledInductor, DiodeInstance, Inductor, PentodeInstance, Resistor,
-    TriodeInstance,
+    Capacitor, CircuitDef, CoupledInductor, CoupledInductor3, DiodeInstance, Inductor,
+    PentodeInstance, Resistor, TriodeInstance,
 };
 use crate::circuit::node::NodeId;
 use crate::circuit::solver::CircuitSolver;
@@ -27,6 +27,7 @@ pub struct SimConfig {
     pub capacitors: Vec<Capacitor>,
     pub inductors: Vec<Inductor>,
     pub coupled_inductors: Vec<CoupledInductor>,
+    pub coupled_inductors3: Vec<CoupledInductor3>,
     pub triodes: Vec<TriodeInstance>,
     pub pentodes: Vec<PentodeInstance>,
     pub diodes: Vec<DiodeInstance>,
@@ -45,6 +46,7 @@ impl SimConfig {
             capacitors: Vec::new(),
             inductors: Vec::new(),
             coupled_inductors: Vec::new(),
+            coupled_inductors3: Vec::new(),
             triodes: Vec::new(),
             pentodes: Vec::new(),
             diodes: Vec::new(),
@@ -158,6 +160,7 @@ impl SimConfig {
             capacitors: self.capacitors.clone(),
             inductors: self.inductors.clone(),
             coupled_inductors: self.coupled_inductors.clone(),
+            coupled_inductors3: self.coupled_inductors3.clone(),
             triodes: self.triodes.clone(),
             pentodes: self.pentodes.clone(),
             diodes: self.diodes.clone(),
@@ -178,12 +181,13 @@ impl Simulator {
     ) -> Self {
         let solver = CircuitSolver::new(config.num_nodes);
         info!(
-            "create simulator: {} nodes, {} R, {} C, {} L, {} CL, {} triodes, {} pentodes, {} diodes",
+            "create simulator: {} nodes, {} R, {} C, {} L, {} CL, {} CL3, {} triodes, {} pentodes, {} diodes",
             config.num_nodes,
             config.resistors.len(),
             config.capacitors.len(),
             config.inductors.len(),
             config.coupled_inductors.len(),
+            config.coupled_inductors3.len(),
             config.triodes.len(),
             config.pentodes.len(),
             config.diodes.len(),
@@ -243,9 +247,9 @@ impl Simulator {
             let v_b = if b > 0 { self.solver.v[b] } else { 0.0 };
             let gl = ind.henrys.recip() * h;
             ind.i_prev += gl * (v_a - v_b);
-            // BE DC leakage: ~h*R/L where R is the effective parallel resistance
-            // Prevents unbounded DC accumulation in lossless BE model
-            let damping = (h * 5_000.0 / ind.henrys).min(0.5);
+            // BE DC leakage: prevents DC accumulation in lossless BE model
+            // Use ~100Ω DCR as damping, not the full reflected load
+            let damping = (h * 100.0 / ind.henrys).min(0.5);
             ind.i_prev *= 1.0 - damping;
         }
 
