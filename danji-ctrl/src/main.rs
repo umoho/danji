@@ -1,167 +1,16 @@
+mod daemon;
+
+use daemon::{AppState, DaemonCtrl};
 use eframe::egui;
-use std::io::{BufRead, BufReader, Write};
-use std::os::unix::net::UnixStream;
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-const SOCKET_PATH: &str = "/tmp/danji.sock";
-
-#[derive(Clone)]
-struct AppState {
-    connected: bool,
-    bypass: bool,
-    volume: f32,
-    gain: f32,
-    bplus: f32,
-    tube: String,
-    model: String,
-    status_msg: String,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            connected: false,
-            bypass: false,
-            volume: -12.0,
-            gain: -38.0,
-            bplus: 300.0,
-            tube: "12AX7".into(),
-            model: "single".into(),
-            status_msg: String::new(),
-        }
-    }
-}
-
-struct DaemonCtrl {
-    tx: mpsc::Sender<DaemonCmd>,
-}
-
-enum DaemonCmd {
-    Set(String),
-    Stop,
-}
-
-impl DaemonCtrl {
-    fn connect() -> Result<(Self, mpsc::Receiver<AppState>), String> {
-        let mut stream = UnixStream::connect(SOCKET_PATH).map_err(|e| format!("connect: {e}"))?;
-
-        let (cmd_tx, cmd_rx) = mpsc::channel::<DaemonCmd>();
-        let (state_tx, state_rx) = mpsc::channel::<AppState>();
-        let state = Arc::new(Mutex::new(AppState::default()));
-
-        // Initial status query
-        writeln!(stream, "status").map_err(|e| format!("send: {e}"))?;
-        let mut reader = BufReader::new(stream.try_clone().unwrap());
-        let mut resp = String::new();
-        reader
-            .read_line(&mut resp)
-            .map_err(|e| format!("read: {e}"))?;
-        {
-            let mut s = state.lock().unwrap();
-            parse_status(&resp, &mut s);
-            s.connected = true;
-            state_tx.send(s.clone()).ok();
-        }
-
-        let state_clone = state.clone();
-        std::thread::spawn(move || {
-            let mut stream = stream;
-            loop {
-                match cmd_rx.recv_timeout(Duration::from_millis(100)) {
-                    Ok(DaemonCmd::Set(cmd)) => {
-                        if writeln!(stream, "{cmd}").is_err() {
-                            break;
-                        }
-                        let mut resp = String::new();
-                        let mut reader = BufReader::new(stream.try_clone().unwrap());
-                        reader.read_line(&mut resp).ok();
-                        let resp = resp.trim().to_string();
-                        let mut s = state_clone.lock().unwrap();
-                        s.status_msg = resp.clone();
-                        if cmd == "stop" {
-                            break;
-                        }
-                        drop(s);
-                        // Refresh full status after command
-                        writeln!(stream, "status").ok();
-                        let mut resp2 = String::new();
-                        reader.read_line(&mut resp2).ok();
-                        let mut s = state_clone.lock().unwrap();
-                        parse_status(&resp2, &mut s);
-                        state_tx.send(s.clone()).ok();
-                    }
-                    Ok(DaemonCmd::Stop) => {
-                        let _ = writeln!(stream, "stop");
-                        break;
-                    }
-                    Err(mpsc::RecvTimeoutError::Timeout) => {
-                        // Periodic refresh
-                        writeln!(stream, "status").ok();
-                        let mut resp = String::new();
-                        let mut reader = BufReader::new(stream.try_clone().unwrap());
-                        reader.read_line(&mut resp).ok();
-                        let mut s = state_clone.lock().unwrap();
-                        parse_status(&resp, &mut s);
-                        state_tx.send(s.clone()).ok();
-                    }
-                    Err(mpsc::RecvTimeoutError::Disconnected) => break,
-                }
-            }
-        });
-
-        Ok((
-            Self {
-                tx: cmd_tx,
-            },
-            state_rx,
-        ))
-    }
-
-    fn send(&self, cmd: String) {
-        let _ = self.tx.send(DaemonCmd::Set(cmd));
-    }
-
-    fn stop(&self) {
-        let _ = self.tx.send(DaemonCmd::Stop);
-    }
-}
-
-fn parse_status(line: &str, state: &mut AppState) {
-    for part in line.split_whitespace() {
-        let mut kv = part.splitn(2, '=');
-        let key = kv.next().unwrap_or("");
-        let val = kv.next().unwrap_or("");
-        match key {
-            "bypass" => state.bypass = val == "on",
-            "volume" => state.volume = val.parse().unwrap_or(-12.0),
-            "gain" => state.gain = val.parse().unwrap_or(-38.0),
-            "bplus" => state.bplus = val.parse().unwrap_or(300.0),
-            "tube" => state.tube = val.to_string(),
-            "model" => state.model = val.to_string(),
-            _ => {}
-        }
-    }
-}
-
 fn main() -> Result<(), eframe::Error> {
-    let (ctrl, state_rx) = DaemonCtrl::connect().unwrap_or_else(|e| {
+    let (state_tx, state_rx) = mpsc::channel::<AppState>();
+    let ctrl = DaemonCtrl::connect(state_tx).unwrap_or_else(|e| {
         eprintln!("Warning: daemon not running ({e})");
-        let (tx, _rx) = mpsc::channel();
-        let (state_tx, state_rx) = mpsc::channel();
-        let state = Arc::new(Mutex::new(AppState::default()));
-        let st = state.clone();
-        std::thread::spawn(move || loop {
-            std::thread::sleep(Duration::from_secs(1));
-            state_tx.send(st.lock().unwrap().clone()).ok();
-        });
-        (
-            DaemonCtrl {
-                tx,
-            },
-            state_rx,
-        )
+        let (tx, _) = mpsc::channel();
+        DaemonCtrl::from_fallback(tx)
     });
 
     let options = eframe::NativeOptions {
@@ -194,7 +43,6 @@ struct DaemonApp {
 
 impl eframe::App for DaemonApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Drain pending state updates
         while let Ok(new) = self.state_rx.try_recv() {
             self.state = new;
         }
@@ -211,7 +59,7 @@ impl eframe::App for DaemonApp {
             ui.horizontal(|ui| {
                 ui.label("Model:");
                 let models = ["single", "two-stage", "chain"];
-                let mut current = models
+                let mut cur = models
                     .iter()
                     .position(|m| *m == self.state.model)
                     .unwrap_or(0);
@@ -219,10 +67,9 @@ impl eframe::App for DaemonApp {
                     .selected_text(&self.state.model)
                     .show_ui(ui, |ui| {
                         for (i, m) in models.iter().enumerate() {
-                            let selected = current == i;
-                            if ui.selectable_label(selected, *m).clicked() {
+                            if ui.selectable_label(cur == i, *m).clicked() {
                                 self.ctrl.send(format!("model {m}"));
-                                current = i;
+                                cur = i;
                             }
                         }
                     });
@@ -233,7 +80,7 @@ impl eframe::App for DaemonApp {
                 let tubes = [
                     "12AX7", "12AU7", "12AT7", "6DJ8", "6L6GC", "6550", "EL34", "KT88",
                 ];
-                let mut current = tubes
+                let mut cur = tubes
                     .iter()
                     .position(|t| *t == self.state.tube)
                     .unwrap_or(0);
@@ -241,10 +88,9 @@ impl eframe::App for DaemonApp {
                     .selected_text(&self.state.tube)
                     .show_ui(ui, |ui| {
                         for (i, t) in tubes.iter().enumerate() {
-                            let selected = current == i;
-                            if ui.selectable_label(selected, *t).clicked() {
+                            if ui.selectable_label(cur == i, *t).clicked() {
                                 self.ctrl.send(format!("tube {t}"));
-                                current = i;
+                                cur = i;
                             }
                         }
                     });
@@ -284,21 +130,14 @@ impl eframe::App for DaemonApp {
 
             ui.separator();
 
-            let bypass_text = if self.state.bypass {
-                "Bypass: ON"
+            let label = if self.state.bypass {
+                egui::RichText::new("Bypass: ON").color(egui::Color32::YELLOW)
             } else {
-                "Bypass: OFF"
+                egui::RichText::new("Bypass: OFF").color(egui::Color32::GREEN)
             };
-            if ui
-                .button(if self.state.bypass {
-                    egui::RichText::new(bypass_text).color(egui::Color32::YELLOW)
-                } else {
-                    egui::RichText::new(bypass_text).color(egui::Color32::GREEN)
-                })
-                .clicked()
-            {
-                let new = if self.state.bypass { "off" } else { "on" };
-                self.ctrl.send(format!("bypass {new}"));
+            if ui.button(label).clicked() {
+                let val = if self.state.bypass { "off" } else { "on" };
+                self.ctrl.send(format!("bypass {val}"));
                 self.state.bypass = !self.state.bypass;
             }
 
@@ -314,7 +153,6 @@ impl eframe::App for DaemonApp {
             });
         });
 
-        // Continuous repaint for status updates
         if self.last_poll.elapsed() > Duration::from_millis(200) {
             ctx.request_repaint();
             self.last_poll = Instant::now();
