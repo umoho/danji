@@ -1,9 +1,10 @@
 // danji-cli 胆味测试报告模板
 // 用法: typst compile --root test/ test/template.typ output.pdf --input run-id=2026-06-25_001
+// 注意: 中英文间距由 typst cjk-latin-spacing:auto 自动处理，不要手动加空格
 
 #set document(
-  title: "danji-cli 胆味测试报告",
-  author: "danji 测试框架",
+  title: "danji-cli胆味测试报告",
+  author: "danji测试框架",
 )
 
 #set page(
@@ -11,7 +12,7 @@
   margin: 2.5cm,
   header: [
     #set text(size: 8pt, fill: gray)
-    #h(1fr) danji-cli 测试报告 — Run #sys.inputs.at("run-id", default: "unknown")
+    #h(1fr) danji-cli测试报告 — Run #sys.inputs.at("run-id", default: "unknown")
   ],
   footer: [
     #set text(size: 8pt, fill: gray)
@@ -85,9 +86,9 @@
 }
 
 #let model-label(m) = {
-  if m == "single" { "single 模型（单管共阴极放大）" }
-  else if m == "two-stage" { "two-stage 模型（级联双级放大）" }
-  else { "chain 模型（完整前级链）" }
+  if m == "single" { "single模型（单管共阴极放大）" }
+  else if m == "two-stage" { "two-stage模型（级联双级放大）" }
+  else { "chain模型（完整前级链）" }
 }
 
 // ===== 主体 =====
@@ -106,7 +107,7 @@
 // ===== 摘要 =====
 = 摘要
 
-本报告记录 danji-cli 胆机放大器仿真工具的"胆味"测试结果。测试基于音频工程领域的学术论文和行业标准，旨在客观量化 danji-cli 是否达到真实胆机的音色特征。
+本报告记录danji-cli胆机放大器仿真工具的"胆味"测试结果。测试基于音频工程领域的学术论文和行业标准，旨在客观量化danji-cli是否达到真实胆机的音色特征。
 
 #{
   let summary = ()
@@ -114,7 +115,7 @@
     let pass = total-pass(item.data)
     let total = item.data.len()
     let color = if pass == total { green } else if pass > 0 { orange } else { red }
-    summary.push([- #text(fill: color)[#item.model 模型达标]（#pass/#total 通过）])
+    summary.push([- #text(fill: color)[#(item.model)模型达标]（#pass/#(total)通过）])
   }
   [*核心结论*：]
   summary.join()
@@ -138,18 +139,18 @@
 
 + *偶次谐波主导*：二次谐波（2nd harmonic）幅度最强，四次、六次谐波次之
 + *低次谐波为主*：各次谐波幅度随阶数递减
-+ *高次谐波微弱*：高阶谐波（5 次以上）幅度很小
++ *高次谐波微弱*：高阶谐波（5次以上）幅度很小
 + *软削波特性*：信号过载时产生平滑的削波，而非硬削波
 
-== 胆味 vs 失真
+== 胆味vs失真
 
 重要澄清："胆味就是失真"的说法是错误的。胆味的本质是谐波的*分布特征*（偶次为主、低次为主），而非失真的绝对大小。良好的胆机设计可以在保持可听谐波特征的同时，将总谐波失真控制在合理范围内。
 
 == 标准测试方法
 
-根据 DAFX、TI、IEEE 等学术论文，胆机测试包括以下方法：
+根据DAFX、TI、IEEE等学术论文，胆机测试包括以下方法：
 
-*谐波失真分析*：向放大器输入单一频率的正弦波，分析输出信号的频谱成分。胆机特征为 2nd > 3rd > 4th > ...（偶次谐波占主导）。
+*谐波失真分析*：向放大器输入单一频率的正弦波，分析输出信号的频谱成分。胆机特征为2nd > 3rd > 4th > ...（偶次谐波占主导）。
 
 *总谐波失真（THD）*：
 
@@ -175,7 +176,7 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
     [THD], [0.5% - 3%], [胆机典型范围],
     [五次以上谐波], [< 5%], [高次谐波应微弱],
   ),
-  caption: [danji-cli 胆味测试合格标准],
+  caption: [danji-cli胆味测试合格标准],
 )
 
 == 判定规则
@@ -219,7 +220,7 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
 
   figure(
     make-table(data),
-    caption: [#model 模型测试结果],
+    caption: [#(model)模型测试结果],
   )
 
   {
@@ -233,18 +234,18 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
 
     #figure(
       image(plots-dir + "/harmonics_" + model + "_sine_" + f0-name(r) + ".png", width: 80%),
-      caption: [#model 模型 #f0-label(r) 谐波频谱],
+      caption: [#(model)模型#f0-label(r)谐波频谱],
     )
 
     #figure(
       image(plots-dir + "/spectrum_" + model + "_sine_" + f0-name(r) + ".png", width: 80%),
-      caption: [#model 模型 #f0-label(r) 频谱对比（输入 vs 输出）],
+      caption: [#(model)模型#f0-label(r)频谱对比（输入vs输出）],
     )
   ]
 
   figure(
     image(plots-dir + "/thd_" + model + ".png", width: 70%),
-    caption: [#model 模型 THD 对比],
+    caption: [#(model)模型THD对比],
   )
 }
 
@@ -269,11 +270,11 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
   [== #model-label(model)]
 
   if all-pass {
-    [#model 模型全部达标。平均 THD 为 #fmt-thd(avg-thd)，处于胆机典型范围（0.5%-3%）内。平均二次谐波占比 #fmt-pct(avg-2nd)，远超 60% 的合格线，偶次谐波特征显著。该模型的增益（约 62 倍）与输入幅度匹配良好，输出信号保持在电子管的线性工作区内，产生的谐波失真以偶次为主，这正是胆味的声学基础。]
+    [#(model)模型全部达标。平均THD为#fmt-thd(avg-thd)，处于胆机典型范围（0.5%-3%）内。平均二次谐波占比#fmt-pct(avg-2nd)，远超60%的合格线，偶次谐波特征显著。该模型的增益（约62倍）与输入幅度匹配良好，输出信号保持在电子管的线性工作区内，产生的谐波失真以偶次为主，这正是胆味的声学基础。]
   } else if all-fail {
-    [#model 模型全部未达标。平均 THD 高达 #fmt-thd(avg-thd)，远超 3% 的合格上限。平均二次谐波占比仅 #fmt-pct(avg-2nd)，远低于 60% 的合格线。主要原因是级联增益过高导致严重削波，输出信号产生大量奇次谐波和高次谐波，与胆机"偶次谐波主导、高次谐波微弱"的特征完全相反。需要降低输入增益或调整 B+ 电压。]
+    [#(model)模型全部未达标。平均THD高达#fmt-thd(avg-thd)，远超3%的合格上限。平均二次谐波占比仅#fmt-pct(avg-2nd)，远低于60%的合格线。主要原因是级联增益过高导致严重削波，输出信号产生大量奇次谐波和高次谐波，与胆机"偶次谐波主导、高次谐波微弱"的特征完全相反。需要降低输入增益或调整B+电压。]
   } else {
-    [#model 模型部分达标（#pass-count/#data.len() 通过）。达标频率的 THD 和二次谐波占比符合胆机特征，但未达标频率存在增益过高的问题。建议针对未达标频率调整参数。]
+    [#(model)模型部分达标（#pass-count/#data.len()通过）。达标频率的THD和二次谐波占比符合胆机特征，但未达标频率存在增益过高的问题。建议针对未达标频率调整参数。]
   }
 }
 
@@ -291,7 +292,7 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
     }
   }
   if all-models-pass {
-    [所有模型均达到胆味标准。测试框架验证了 danji-cli 能够准确模拟真空管放大器的谐波特征。]
+    [所有模型均达到胆味标准。测试框架验证了danji-cli能够准确模拟真空管放大器的谐波特征。]
   } else {
     [部分模型未达标：#failed-models.join("、")。主要问题是增益过高导致削波，需要参数调优。]
   }
@@ -309,10 +310,10 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
 
     if pass-count < data.len() {
       if avg-thd > 3.0 {
-        suggestions.push([- #item.model 模型 THD 过高（#fmt-thd(avg-thd)），建议使用 `--gain -20dB` 或更低增益])
+        suggestions.push([- #(item.model)模型THD过高（#fmt-thd(avg-thd)），建议使用`--gain -20dB`或更低增益])
       }
       if avg-2nd < 60.0 {
-        suggestions.push([- #item.model 模型二次谐波不足（#fmt-pct(avg-2nd)），建议降低增益以恢复偶次谐波特征])
+        suggestions.push([- #(item.model)模型二次谐波不足（#fmt-pct(avg-2nd)），建议降低增益以恢复偶次谐波特征])
       }
     }
   }
