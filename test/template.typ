@@ -198,20 +198,27 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
 
 = 测试环境
 
-#figure(
-  table(
-    columns: (auto, auto),
-    align: (left, left),
-    table.header([*项目*], [*详情*]),
-    [测试工具], [danji-cli (Rust release)],
-    [分析工具], [Python 3.13 + numpy + scipy + matplotlib],
-    [测试信号], [100 Hz / 1 kHz / 10 kHz 正弦波, -6 dBFS, 2s],
-    [采样率], [44100 Hz],
-    [模型], [single / two-stage / chain],
-    [Run ID], [#run-id],
-  ),
-  caption: [测试环境配置],
-)
+#{
+  let gains = ()
+  for item in all-data {
+    let gain = item.data.first().at("gain", default: 0.0)
+    gains.push([#(item.model): #(str(gain))dB])
+  }
+  figure(
+    table(
+      columns: (auto, auto),
+      align: (left, left),
+      table.header([*项目*], [*详情*]),
+      [测试工具], [danji-cli (Rust release)],
+      [分析工具], [Python 3.13 + numpy + scipy + matplotlib],
+      [测试信号], [100 Hz / 1 kHz / 10 kHz 正弦波, -6 dBFS, 2s],
+      [采样率], [44100 Hz],
+      [模型与增益], [#gains.join(", ")],
+      [Run ID], [#run-id],
+    ),
+    caption: [测试环境配置],
+  )
+}
 
 == 测试用例
 

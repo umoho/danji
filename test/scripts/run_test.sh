@@ -97,12 +97,20 @@ done
 echo ""
 echo "[3/4] 分析结果..."
 for model in "${MODELS[@]}"; do
-    echo "  Model: $model"
+    # 获取该模型的增益
+    case "$model" in
+        single)    gain=$GAIN_SINGLE ;;
+        two-stage) gain=$GAIN_TWO_STAGE ;;
+        chain)     gain=$GAIN_CHAIN ;;
+    esac
+
+    echo "  Model: $model (gain=${gain}dB)"
     uv run python "$SCRIPT_DIR/analyze.py" \
         --input-dir "$TEST_DIR/input" \
         --output-dir "$TEST_DIR/output/$model" \
         --run-id "$RUN_ID" \
-        --model "$model"
+        --model "$model" \
+        --gain "$gain"
 done
 
 # 4. 生成图表

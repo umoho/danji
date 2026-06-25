@@ -123,6 +123,7 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--run-id", type=str, required=True, help="测试批次 ID，如 2026-06-25_001")
     parser.add_argument("--model", type=str, default="single")
+    parser.add_argument("--gain", type=float, default=0.0, help="输入增益 (dB)")
     args = parser.parse_args()
 
     results = []
@@ -142,6 +143,7 @@ def main() -> None:
         result = analyze_pair(input_file, output_file, f0)
         verdict = check_pass(result)
         result["verdict"] = verdict
+        result["gain"] = args.gain
         results.append(result)
 
     report_dir = Path(__file__).resolve().parent.parent / "analysis" / "reports" / args.run_id
