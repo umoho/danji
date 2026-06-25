@@ -1,3 +1,4 @@
+use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::StreamConfig;
 use danji::{single_triode_config, Simulator, TriodeParams};
@@ -7,6 +8,30 @@ use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+
+#[derive(Parser)]
+#[command(name = "danji-realtime", about = "Real-time tube amplifier simulation")]
+struct Args {
+    /// Output volume in dB
+    #[arg(default_value = "-12")]
+    volume: f64,
+
+    /// Bypass tube processing (direct passthrough)
+    #[arg(long)]
+    bypass: bool,
+
+    /// Output 1 kHz test tone instead of processing audio
+    #[arg(long)]
+    test_tone: bool,
+
+    /// Capture BlackHole input to WAV file
+    #[arg(long, value_name = "PATH")]
+    capture: Option<String>,
+
+    /// Duration in seconds for capture mode
+    #[arg(long, default_value = "3.0")]
+    duration: f64,
+}
 
 struct DcBlocker {
     x_prev: f32,
@@ -38,44 +63,6 @@ where
     host.devices().ok()?.into_iter().find(predicate)
 }
 
-fn analyze_wav(path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut reader = hound::WavReader::open(path)?;
-    let spec = reader.spec();
-    let samples: Vec<i16> = reader.samples::<i16>().map(|s| s.unwrap_or(0)).collect();
-
-    let total = samples.len();
-    let nonzero = samples.iter().filter(|&&s| s != 0).count();
-    let max_abs = samples.iter().map(|&s| s.abs()).max().unwrap_or(0);
-    let dc = samples.iter().map(|&s| s as i64).sum::<i64>() as f64 / total as f64;
-    let rms = (samples.iter().map(|&s| (s as f64).powi(2)).sum::<f64>() / total as f64).sqrt();
-    let zero_runs = samples.split(|&s| s == 0).filter(|s| s.len() > 100).count();
-
-    println!("=== WAV Analysis: {} ===", path);
-    println!(
-        "  Format:        {} Hz, {} ch, {}-bit",
-        spec.sample_rate, spec.channels, spec.bits_per_sample
-    );
-    println!("  Total samples: {}", total);
-    println!(
-        "  Non-zero:      {} ({:.1}%)",
-        nonzero,
-        nonzero as f64 / total as f64 * 100.0
-    );
-    println!(
-        "  Peak:          {} ({:.4} FS)",
-        max_abs,
-        max_abs as f64 / 32768.0
-    );
-    println!("  DC offset:     {:.2}", dc);
-    println!(
-        "  RMS:           {:.4} ({:.1} dBFS)",
-        rms / 32768.0,
-        20.0 * (rms / 32768.0).log10()
-    );
-    println!("  Zero runs >100: {}", zero_runs);
-    Ok(())
-}
-
 fn capture_to_file(
     path: &str,
     duration_secs: f64,
@@ -95,9 +82,8 @@ fn capture_to_file(
         .map_err(|_| "BlackHole has no input config")?
         .into();
 
-    eprintln!(
-        "Device: {} ({} Hz, {} ch)",
-        blackhole.description()?.name(),
+    log::info!(
+        "BlackHole: {} Hz, {} ch",
         config.sample_rate,
         config.channels
     );
@@ -124,28 +110,21 @@ fn capture_to_file(
                 }
             }
         },
-        move |err| eprintln!("input error: {err}"),
+        move |err| log::error!("capture error: {err}"),
         None,
     )?;
 
     _stream.play()?;
-    eprintln!("Capturing {} seconds to {}...", duration_secs, path);
+    log::info!("Capturing {} s to {}...", duration_secs, path);
 
-    let total_ms = (duration_secs * 1000.0) as u64;
-    for _ in 0..total_ms / 100 {
-        thread::sleep(Duration::from_millis(100));
-    }
+    thread::sleep(Duration::from_secs_f64(duration_secs));
 
     writer.lock().unwrap().take();
-    eprintln!("Done.");
+    log::info!("Capture complete.");
     Ok(())
 }
 
-fn start_realtime(
-    volume_db: f64,
-    bypass: bool,
-    test_tone: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn start_realtime(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
     let host = cpal::default_host();
 
     let blackhole = find_device(&host, |d| {
@@ -180,25 +159,22 @@ fn start_realtime(
         buffer_size: cpal::BufferSize::Default,
     };
 
-    eprintln!(
+    log::info!(
         "Input:  {} ({} Hz, {} ch)",
         blackhole.description()?.name(),
         input_config.sample_rate,
         input_config.channels
     );
-    eprintln!(
+    log::info!(
         "Output: {} ({} Hz, {} ch)",
         output_device.description()?.name(),
         output_config.sample_rate,
         output_config.channels
     );
-    eprintln!(
-        "Volume: {} dB ({:.3}x)",
-        volume_db,
-        10.0_f64.powf(volume_db / 20.0)
-    );
 
-    let vol = 10.0_f64.powf(volume_db / 20.0) as f32;
+    let bypass = args.bypass;
+    let test_tone = args.test_tone;
+    let vol = 10.0_f64.powf(args.volume / 20.0) as f32;
     let running = Arc::new(AtomicBool::new(true));
     let sr = input_config.sample_rate;
 
@@ -222,14 +198,14 @@ fn start_realtime(
     }
 
     let (tx, rx) = mpsc::sync_channel::<f32>(65536);
-    let sample_rate = output_config.sample_rate;
 
     let output_stream = output_device.build_output_stream(
         &output_config,
         move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             if test_tone {
+                let sr = output_config.sample_rate as f32;
                 let mut phase = 0.0f32;
-                let delta = 2.0 * std::f32::consts::PI * 1000.0 / sample_rate as f32;
+                let delta = 2.0 * std::f32::consts::PI * 1000.0 / sr;
                 for sample in data.iter_mut() {
                     *sample = (phase.sin() * vol).clamp(-1.0, 1.0);
                     phase = (phase + delta) % (2.0 * std::f32::consts::PI);
@@ -240,7 +216,7 @@ fn start_realtime(
                 *sample = rx.try_recv().unwrap_or(0.0);
             }
         },
-        move |err| eprintln!("output error: {err}"),
+        move |err| log::error!("output error: {err}"),
         None,
     )?;
 
@@ -252,7 +228,7 @@ fn start_realtime(
             }
             for frame in data.chunks(2) {
                 let l_in = frame[0];
-                let r_in = if frame.len() > 1 { frame[1] } else { l_in };
+                let r_in = frame.get(1).copied().unwrap_or(l_in);
                 let l_raw = if bypass {
                     l_in
                 } else {
@@ -265,15 +241,12 @@ fn start_realtime(
                 };
                 let l_out = (dc_l.process(l_raw) * vol).clamp(-1.0, 1.0);
                 let r_out = (dc_r.process(r_raw) * vol).clamp(-1.0, 1.0);
-                if tx.try_send(l_out).is_err() {
-                    break;
-                }
-                if tx.try_send(r_out).is_err() {
+                if tx.try_send(l_out).is_err() || tx.try_send(r_out).is_err() {
                     break;
                 }
             }
         },
-        move |err| eprintln!("input error: {err}"),
+        move |err| log::error!("input error: {err}"),
         None,
     )?;
 
@@ -281,82 +254,43 @@ fn start_realtime(
     output_stream.play()?;
 
     if test_tone {
-        eprintln!("Mode:  test tone (1kHz)");
+        log::info!("Mode: test tone (1 kHz)");
     } else if bypass {
-        eprintln!("Mode:  bypass (no tube)");
+        log::info!("Mode: bypass");
     } else {
-        eprintln!("Mode:  12AX7 single stage");
+        log::info!("Mode: 12AX7 single stage");
     }
-    eprintln!("Ctrl+C to stop.");
+    log::info!("Volume: {} dB ({:.3}x)", args.volume, vol);
+    log::info!("Ctrl+C to stop");
 
     let r = running.clone();
     ctrlc::set_handler(move || {
-        eprintln!("\nShutting down...");
-        r.store(false, Ordering::SeqCst);
+        r.store(false, Ordering::Relaxed);
     })?;
-    while running.load(Ordering::SeqCst) {
+    while running.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));
     }
 
     drop(input_stream);
     drop(output_stream);
-    eprintln!("Stopped.");
     Ok(())
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let mut capture = false;
-    let mut analyze = false;
-    let mut bypass = false;
-    let mut test_tone = false;
-    let mut capture_path = String::from("capture.wav");
-    let mut capture_duration = 3.0;
-    let mut volume_db = -12.0;
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
 
-    let mut i = 1;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--capture" => {
-                capture = true;
-                if i + 1 < args.len() && !args[i + 1].starts_with('-') {
-                    i += 1;
-                    capture_path = args[i].clone();
-                }
-                if i + 1 < args.len() && !args[i + 1].starts_with('-') {
-                    i += 1;
-                    capture_duration = args[i].parse().unwrap_or(3.0);
-                }
-            }
-            "--analyze" | "--check" => {
-                analyze = true;
-                if i + 1 < args.len() && !args[i + 1].starts_with('-') {
-                    i += 1;
-                    capture_path = args[i].clone();
-                }
-            }
-            "--test-tone" => test_tone = true,
-            "--bypass" => bypass = true,
-            a if a.parse::<f64>().is_ok() => volume_db = a.parse().unwrap(),
-            _ => {}
-        }
-        i += 1;
-    }
+    let args = Args::parse();
 
-    if analyze {
-        if let Err(e) = analyze_wav(&capture_path) {
-            eprintln!("Error: {e}");
+    if let Some(path) = &args.capture {
+        if let Err(e) = capture_to_file(path, args.duration, args.volume) {
+            log::error!("{e}");
             std::process::exit(1);
         }
-    } else if capture {
-        if let Err(e) = capture_to_file(&capture_path, capture_duration, volume_db) {
-            eprintln!("Error: {e}");
-            std::process::exit(1);
-        }
-    } else {
-        if let Err(e) = start_realtime(volume_db, bypass, test_tone) {
-            eprintln!("Error: {e}");
-            std::process::exit(1);
-        }
+    } else if let Err(e) = start_realtime(&args) {
+        log::error!("{e}");
+        std::process::exit(1);
     }
 }
