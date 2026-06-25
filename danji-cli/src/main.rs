@@ -194,7 +194,6 @@ fn process(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         .map(|(&w, &d)| w * args.mix + d * (1.0 - args.mix))
         .collect();
 
-    // AC-couple: remove DC offset, then normalize
     let dc_offset: f32 = output.iter().sum::<f32>() / output.len() as f32;
     let ac: Vec<f32> = output.iter().map(|&s| s - dc_offset).collect();
     let max_ac = ac.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
