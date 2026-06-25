@@ -27,15 +27,21 @@ fn handle_client(stream: UnixStream, params: &SharedParams, cmd_tx: &mpsc::Sende
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     let mut writer = stream;
     let mut line = String::new();
-    if reader.read_line(&mut line).is_err() {
-        return;
+    loop {
+        line.clear();
+        if reader.read_line(&mut line).is_err() || line.trim().is_empty() {
+            break;
+        }
+        let line = line.trim().to_string();
+        let resp = match parse_command(&line, params, cmd_tx) {
+            Ok(msg) => format!("{msg}\n"),
+            Err(msg) => format!("ERROR {msg}\n"),
+        };
+        if writer.write_all(resp.as_bytes()).is_err() {
+            break;
+        }
+        writer.flush().ok();
     }
-    let line = line.trim();
-    let resp = match parse_command(line, params, cmd_tx) {
-        Ok(msg) => format!("{msg}\n"),
-        Err(msg) => format!("ERROR {msg}\n"),
-    };
-    let _ = writer.write_all(resp.as_bytes());
 }
 
 fn parse_command(
