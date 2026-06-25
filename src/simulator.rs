@@ -32,8 +32,8 @@ pub struct SimConfig {
     pub pentodes: Vec<PentodeInstance>,
     pub diodes: Vec<DiodeInstance>,
     pub input_node: NodeId,
-    pub input2_node: NodeId,
-    pub input2_voltage: f64,
+    pub(crate) input2_node: NodeId,
+    pub(crate) input2_voltage: f64,
     pub output_node: NodeId,
     pub bplus_node: NodeId,
     pub bplus_voltage: f64,
@@ -177,6 +177,7 @@ impl SimConfig {
         self
     }
 
+    #[allow(dead_code)]
     pub fn input2(&mut self, node: NodeId) -> &mut Self {
         self.input2_node = node;
         self
@@ -247,6 +248,13 @@ impl Simulator {
             ci.i2_prev = 0.0;
         }
         self.sample_count = 0;
+    }
+
+    pub fn process_sample_dual(&mut self, input1: f32, input2: f64) -> Result<f32, DanjiError> {
+        self.config.input2_voltage = input2;
+        let result = self.process_sample(input1);
+        self.config.input2_voltage = 0.0;
+        result
     }
 
     pub fn process_sample(&mut self, input: f32) -> Result<f32, DanjiError> {

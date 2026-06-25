@@ -177,9 +177,7 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
 
     // Warmup output stage: set B+ immediately with longer idle
     op.set_bplus(250.0);
-    op.set_input2(0.0);
     for _ in 0..50000 {
-        op.set_input2(0.0);
         op.process_sample(0.0)?;
     }
 
@@ -231,7 +229,6 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
         let vpb = pi.node_voltage(v1b_p) as f64;
         dc_block_a += alpha * (vpa - dc_block_a);
         dc_block_b += alpha * (vpb - dc_block_b);
-        op.set_input2(0.0);
         let _ = op.process_sample(0.0)?;
     }
     // Now dc_block_a ≈ Vpa_DC, dc_block_b ≈ Vpb_DC
@@ -252,8 +249,7 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
         dc_block_b += alpha * (vpb - dc_block_b);
 
         // Output stage step with anti-phase drive
-        op.set_input2(ac_b as f64);
-        let _ = op.process_sample(ac_a as f32)?;
+        let _ = op.process_sample_dual(ac_a as f32, ac_b as f64)?;
         vpa_log[i] = op.node_voltage(eap);
         vpb_log[i] = op.node_voltage(ebp);
     }
