@@ -413,6 +413,14 @@ impl CircuitSolver {
                         _iter, max_delta
                     );
                 }
+                // Guard against NaN/Inf in the solution (can pass the delta
+                // check if both v and v_old are NaN/Inf)
+                if self.v[..n].iter().any(|x| !x.is_finite()) {
+                    return Err(DanjiError::Diverged {
+                        sample: 0,
+                        iterations: _iter,
+                    });
+                }
                 self.v_prev = self.v;
                 return Ok(());
             }
