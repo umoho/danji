@@ -12,8 +12,8 @@ use std::time::Duration;
 #[derive(Parser)]
 #[command(name = "danji-realtime", about = "Real-time tube amplifier simulation")]
 struct Args {
-    /// Output volume in dB
-    #[arg(default_value = "-12")]
+    /// Output volume in dB (e.g. -12, -6)
+    #[arg(default_value = "-12", allow_hyphen_values = true)]
     volume: f64,
 
     /// Bypass tube processing (direct passthrough)
