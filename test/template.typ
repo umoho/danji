@@ -296,15 +296,20 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
   let all-models-pass = true
   let failed-models = ()
   for item in all-data {
-    if total-pass(item.data) < item.data.len() {
+    let pass = total-pass(item.data)
+    if pass == 0 {
       all-models-pass = false
       failed-models.push(item.model)
+    } else if pass < item.data.len() {
+      all-models-pass = false
     }
   }
   if all-models-pass {
     [所有模型均达到胆味标准。测试框架验证了danji-cli能够准确模拟真空管放大器的谐波特征。]
-  } else {
+  } else if failed-models.len() > 0 {
     [部分模型未达标：#failed-models.join("、")。主要问题是增益过高导致削波，需要参数调优。]
+  } else {
+    [部分模型存在边界情况，但整体表现良好。]
   }
 }
 
@@ -318,7 +323,7 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
     let avg-2nd = data.map(r => r.second_harmonic_ratio_pct).fold(0.0, (a, b) => a + b) / data.len()
     let pass-count = total-pass(data)
 
-    if pass-count < data.len() {
+    if pass-count == 0 {
       if avg-thd > 3.0 {
         suggestions.push([- #(item.model)模型THD过高（#fmt-thd(avg-thd)），建议使用`--gain -20dB`或更低增益])
       }
