@@ -1,39 +1,99 @@
-use danji::{NodeId, SimConfig, Simulator};
+use danji::{NodeId, SimConfig, Simulator, TriodeParams};
+use std::f64::consts::PI;
 
-fn main() -> Result<(), danji::DanjiError> {
-    let sr = 44100u32;
-    // Test: 3-winding coupled inductor with k=0.99 (push-pull transformer core)
-    // Windings: p1-ct (2.5H), p2-ct (2.5H), spk-gnd (0.016H)
-    let mut cfg = SimConfig::new(sr, 5);
-    let (g, p1, ct, p2, spk) = (NodeId(0), NodeId(1), NodeId(2), NodeId(3), NodeId(4));
+const SR: u32 = 44100;
 
-    cfg.add_resistor(p1, g, 1_000.0)
-        .add_resistor(p2, g, 1_000.0)
-        .add_resistor(spk, g, 8.0)
-        .add_coupled_inductor3(p1, ct, p2, spk, g, 2.5, 2.5, 0.016, 0.99, 0.95, 0.95)
-        .input(p1)
-        .output(spk)
-        .bplus(ct, 10.0);
-
-    let mut sim = Simulator::new(cfg, vec![], vec![], vec![]);
-    for i in 0..10 {
-        let v = sim.process_sample(0.0)?;
-        eprintln!(
-            "[{i}] Vp1={:.2} Vp2={:.2} Vct={:.2} Vspk={:.4}",
-            sim.node_voltage(p1),
-            sim.node_voltage(p2),
-            sim.node_voltage(ct),
-            v
-        );
-    }
-
-    // Verify: CT at ~5V (voltage divider from two VSRC_G on p1 and ct... no, ct only from B+)
-    // Actually ct has B+=10V, p1 has input=0V. Vct should be ~10V.
-    eprintln!(
-        "Steady: Vct={:.1} Vspk={:.3}",
-        sim.node_voltage(ct),
-        sim.node_voltage(spk)
+fn test_phase_inverter() -> Result<(), danji::DanjiError> {
+    // 12AX7 long-tail pair phase inverter
+    let num_nodes = 7;
+    let (g, v1a_g, cath, v1a_p, v1b_g, v1b_p, b) = (
+        NodeId(0),
+        NodeId(1),
+        NodeId(2),
+        NodeId(3),
+        NodeId(4),
+        NodeId(5),
+        NodeId(6),
     );
 
+    let mut cfg = SimConfig::new(SR, num_nodes);
+    cfg.add_resistor(v1b_g, g, 470_000.0)
+        .add_resistor(cath, g, 47_000.0)
+        .add_resistor(v1a_p, b, 100_000.0)
+        .add_resistor(v1b_p, b, 100_000.0)
+        .add_resistor(b, g, 1_000_000.0)
+        .add_triode(v1a_p, v1a_g, cath, 0)
+        .add_triode(v1b_p, v1b_g, cath, 0)
+        .input(v1a_g)
+        .output(v1b_p)
+        .bplus(b, 250.0);
+
+    let mut sim = Simulator::new(cfg, vec![TriodeParams::new_12ax7()], vec![], vec![]);
+
+    for i in 0..5000 {
+        sim.set_bplus(250.0 * (i as f64) / 5000.0);
+        sim.process_sample(0.0)?;
+    }
+    sim.set_bplus(250.0);
+    for _ in 0..5000 {
+        sim.process_sample(0.0)?;
+    }
+
+    println!("=== Phase Inverter DC Bias ===");
+    println!(
+        "V1a: Vg={:.2} Vk={:.2} Vp={:.2}",
+        sim.node_voltage(v1a_g),
+        sim.node_voltage(cath),
+        sim.node_voltage(v1a_p)
+    );
+    println!(
+        "V1b: Vg={:.2} Vk={:.2} Vp={:.2}",
+        sim.node_voltage(v1b_g),
+        sim.node_voltage(cath),
+        sim.node_voltage(v1b_p)
+    );
+
+    let n = (SR as f64 * 0.1) as usize;
+    let mut vpa = Vec::new();
+    let mut vpb = Vec::new();
+
+    for i in 0..n {
+        let t = i as f64 / SR as f64;
+        let vin = (2.0 * PI * 1000.0 * t).sin() as f32 * 0.5;
+        sim.process_sample(vin)?;
+        vpa.push(sim.node_voltage(v1a_p));
+        vpb.push(sim.node_voltage(v1b_p));
+    }
+
+    let dc_a: f32 = vpa.iter().sum::<f32>() / vpa.len() as f32;
+    let dc_b: f32 = vpb.iter().sum::<f32>() / vpb.len() as f32;
+    let ac_a: f32 = vpa.iter().map(|x| (x - dc_a).abs()).fold(0.0f32, f32::max);
+    let ac_b: f32 = vpb.iter().map(|x| (x - dc_b).abs()).fold(0.0f32, f32::max);
+
+    let mut sum = 0.0f64;
+    for (a, b) in vpa.iter().zip(vpb.iter()) {
+        sum += ((*a - dc_a) * (*b - dc_b)) as f64;
+    }
+
+    println!("=== Phase Inverter AC (1kHz, 0.5Vpk input) ===");
+    println!("V1a plate: DC={:.1}V  ACpk={:.3}V", dc_a, ac_a);
+    println!("V1b plate: DC={:.1}V  ACpk={:.3}V", dc_b, ac_b);
+    println!("Phase: {}", if sum < 0.0 { "INVERTED" } else { "SAME" });
+
     Ok(())
+}
+
+fn main() {
+    env_logger::init();
+
+    println!("=== Danji Push-Pull Power Stage ===");
+    println!();
+    println!("Phase inverter test:");
+    if let Err(e) = test_phase_inverter() {
+        eprintln!("  FAILED: {}", e);
+        return;
+    }
+
+    println!();
+    println!("Full push-pull: pending (see devlog)");
 }

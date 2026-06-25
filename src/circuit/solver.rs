@@ -431,23 +431,20 @@ impl CircuitSolver {
         let mut a = self.g;
         let mut b = self.i;
 
+        // Gaussian elimination without pivoting.
+        // MNA matrices are diagonally dominant (each node's self-conductance
+        // equals the sum of series conductances attached to it).  Partial
+        // pivoting is unnecessary and, worse, can swap a small-diagonal row
+        // (e.g. a grid-grounded through a large resistor) into a position
+        // where subsequent elimination by a VSRC row (G ≈ 1e6) produces
+        // catastrophic cancellation.
         for col in 0..n {
-            let mut max_val = a[col][col].abs();
-            let mut max_row = col;
-            for row in (col + 1)..n {
-                let val = a[row][col].abs();
-                if val > max_val {
-                    max_val = val;
-                    max_row = row;
-                }
-            }
-            if max_val < 1e-40 {
-                error!("singular matrix at column {}, pivot={:.2e}", col, max_val);
+            if a[col][col].abs() < 1e-40 {
+                error!(
+                    "singular matrix at column {}, pivot={:.2e}",
+                    col, a[col][col]
+                );
                 return Err(DanjiError::SingularMatrix { node: col });
-            }
-            if max_row != col {
-                a.swap(col, max_row);
-                b.swap(col, max_row);
             }
             let pivot = a[col][col];
             for row in (col + 1)..n {

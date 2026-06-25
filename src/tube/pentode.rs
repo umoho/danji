@@ -4,16 +4,21 @@ pub fn plate_current(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParam
     let vpk = vp - vc;
     let vg1k = vg1 - vc;
     let vg2k = vg2 - vc;
-    if vg2k <= 0.0 {
+    if vg2k <= 0.0 || vpk <= 0.0 {
         return 0.0;
     }
-    let e1 = (vg2k / params.kp) * (1.0 + (params.kp * (1.0 / params.mu + vg1k / vg2k)).exp()).ln();
+    let eg = params.kp * (1.0 / params.mu + vg1k / vg2k);
+    let e1 = if eg > 50.0 {
+        (vg2k / params.kp) * eg
+    } else {
+        (vg2k / params.kp) * (1.0 + eg.exp()).ln()
+    };
     let ip = if e1 > 0.0 {
         (e1.powf(params.ex) + e1 * e1.powf(params.ex - 1.0)) / params.kg1
     } else {
         0.0
     };
-    ip * (vpk.max(0.0) / params.kvb).atan()
+    ip * (vpk / params.kvb).atan()
 }
 
 pub fn screen_current(vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
