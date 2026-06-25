@@ -215,28 +215,71 @@
 
 = 讨论
 
-== single 模型为何合格
+#for item in all-data {
+  let model = item.model
+  let data = item.data
+  let avg-thd = data.map(r => r.output_thd_pct).fold(0.0, (a, b) => a + b) / data.len()
+  let avg-2nd = data.map(r => r.second_harmonic_ratio_pct).fold(0.0, (a, b) => a + b) / data.len()
+  let pass-count = total-pass(data)
+  let all-pass = pass-count == data.len()
+  let all-fail = pass-count == 0
 
-single 模型采用单管共阴极放大拓扑，增益约 62 倍。在输入 -6 dBFS（幅度 0.5V）的条件下，输出仍在电子管的线性工作区内，产生适量的偶次谐波失真，这正是胆味的声学基础。
+  [== #model-label(model)]
 
-== two-stage / chain 模型为何失败
-
-两级 12AX7 级联的理论增益约 9022 倍（约 79 dB），远超单级。即使输入信号幅度很小，第二级也会进入深度非线性区，产生大量奇次谐波和高次谐波。这与胆机"偶次谐波主导、高次谐波微弱"的特征完全相反。
+  if all-pass {
+    [#model 模型全部达标。平均 THD 为 #fmt-thd(avg-thd)，处于胆机典型范围（0.5%-3%）内。平均二次谐波占比 #fmt-pct(avg-2nd)，远超 60% 的合格线，偶次谐波特征显著。该模型的增益（约 62 倍）与输入幅度匹配良好，输出信号保持在电子管的线性工作区内，产生的谐波失真以偶次为主，这正是胆味的声学基础。]
+  } else if all-fail {
+    [#model 模型全部未达标。平均 THD 高达 #fmt-thd(avg-thd)，远超 3% 的合格上限。平均二次谐波占比仅 #fmt-pct(avg-2nd)，远低于 60% 的合格线。主要原因是级联增益过高导致严重削波，输出信号产生大量奇次谐波和高次谐波，与胆机"偶次谐波主导、高次谐波微弱"的特征完全相反。需要降低输入增益或调整 B+ 电压。]
+  } else {
+    [#model 模型部分达标（#pass-count/#data.len() 通过）。达标频率的 THD 和二次谐波占比符合胆机特征，但未达标频率存在增益过高的问题。建议针对未达标频率调整参数。]
+  }
+}
 
 = 结论与建议
 
 == 结论
 
-+ *single 模型达到胆味标准*：二次谐波占比 ≥ 98%，THD ≈ 2.6%，符合偶次谐波主导的胆机特征
-+ *two-stage / chain 模型需要参数调优*：默认增益过高导致严重削波，不符合胆味特征
-+ *测试框架有效*：基于学术论文的合格标准能够客观区分胆机特征
+#{
+  let all-models-pass = true
+  let failed-models = ()
+  for item in all-data {
+    if total-pass(item.data) < item.data.len() {
+      all-models-pass = false
+      failed-models.push(item.model)
+    }
+  }
+  if all-models-pass {
+    [所有模型均达到胆味标准。测试框架验证了 danji-cli 能够准确模拟真空管放大器的谐波特征。]
+  } else {
+    [部分模型未达标：#failed-models.join("、")。主要问题是增益过高导致削波，需要参数调优。]
+  }
+}
 
 == 建议
 
-+ *降低输入增益*：对 two-stage / chain 模型使用 `--gain -20dB` 或更低的增益参数
-+ *调整 B+ 电压*：降低 B+ 电压可减小动态范围，避免削波
-+ *增加负反馈*：在级间引入局部负反馈可降低增益并改善线性度
-+ *音乐文件测试*：使用实际音乐文件进行主观听感验证
+#{
+  let suggestions = ()
+  for item in all-data {
+    let data = item.data
+    let avg-thd = data.map(r => r.output_thd_pct).fold(0.0, (a, b) => a + b) / data.len()
+    let avg-2nd = data.map(r => r.second_harmonic_ratio_pct).fold(0.0, (a, b) => a + b) / data.len()
+    let pass-count = total-pass(data)
+
+    if pass-count < data.len() {
+      if avg-thd > 3.0 {
+        suggestions.push([- #item.model 模型 THD 过高（#fmt-thd(avg-thd)），建议使用 `--gain -20dB` 或更低增益])
+      }
+      if avg-2nd < 60.0 {
+        suggestions.push([- #item.model 模型二次谐波不足（#fmt-pct(avg-2nd)），建议降低增益以恢复偶次谐波特征])
+      }
+    }
+  }
+  if suggestions.len() > 0 {
+    suggestions.join()
+  } else {
+    [当前参数配置合理，无需调整。建议后续使用音乐文件进行主观听感验证。]
+  }
+}
 
 = 参考文献
 
