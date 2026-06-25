@@ -16,7 +16,7 @@
   ],
   footer: [
     #set text(size: 8pt, fill: gray)
-    #h(1fr) context counter(page).display("1 / 1", both: true)
+    #h(1fr) #context counter(page).display("1 / 1", both: true)
   ],
 )
 
