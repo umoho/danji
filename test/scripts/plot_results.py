@@ -9,15 +9,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-ANALYSIS_DIR = Path(__file__).resolve().parent.parent / "analysis"
-PLOTS_DIR = ANALYSIS_DIR / "plots"
-
 plt.rcParams["font.family"] = ["Arial", "sans-serif"]
 plt.rcParams["figure.dpi"] = 150
 plt.rcParams["figure.figsize"] = (12, 8)
 
 
-def plot_harmonic_bars(result: dict, model: str) -> None:
+def plot_harmonic_bars(result: dict, model: str, plots_dir: Path) -> None:
     harmonics_db = result["output_harmonics_db"]
     orders = list(range(1, len(harmonics_db) + 1))
 
@@ -32,13 +29,13 @@ def plot_harmonic_bars(result: dict, model: str) -> None:
     ax.grid(axis="y", alpha=0.3)
 
     f0_name = Path(result["input"]).stem
-    out_path = PLOTS_DIR / f"harmonics_{model}_{f0_name}.png"
+    out_path = plots_dir / f"harmonics_{model}_{f0_name}.png"
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
     print(f"  {out_path.name}")
 
 
-def plot_spectrum_comparison(result: dict, model: str) -> None:
+def plot_spectrum_comparison(result: dict, model: str, plots_dir: Path) -> None:
     spec = result["spectrum"]
     in_freqs = np.array(spec["input_freqs"])
     in_db = np.array(spec["input_db"])
@@ -60,13 +57,13 @@ def plot_spectrum_comparison(result: dict, model: str) -> None:
     ax.grid(alpha=0.3)
 
     f0_name = Path(result["input"]).stem
-    out_path = PLOTS_DIR / f"spectrum_{model}_{f0_name}.png"
+    out_path = plots_dir / f"spectrum_{model}_{f0_name}.png"
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
     print(f"  {out_path.name}")
 
 
-def plot_thd_comparison(all_results: dict[str, list], model: str) -> None:
+def plot_thd_comparison(all_results: dict[str, list], model: str, plots_dir: Path) -> None:
     freqs = []
     thds = []
     for r in all_results[model]:
@@ -87,18 +84,17 @@ def plot_thd_comparison(all_results: dict[str, list], model: str) -> None:
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
 
-    out_path = PLOTS_DIR / f"thd_{model}.png"
+    out_path = plots_dir / f"thd_{model}.png"
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
     print(f"  {out_path.name}")
 
 
-def plot_verdict_summary(all_results: dict[str, list]) -> None:
-    models = list(all_results.keys())
+def plot_verdict_summary(all_results: dict[str, list], plots_dir: Path) -> None:
     verdicts = {"PASS": 0, "BORDERLINE": 0, "FAIL": 0}
 
-    for model in models:
-        for r in all_results[model]:
+    for model, results in all_results.items():
+        for r in results:
             v = r["verdict"]["verdict"]
             verdicts[v] = verdicts.get(v, 0) + 1
 
@@ -112,7 +108,7 @@ def plot_verdict_summary(all_results: dict[str, list]) -> None:
         ax.pie(sizes, labels=labels, colors=colors, autopct="%1.0f%%", startangle=90)
     ax.set_title("danji-cli Test Verdict Summary")
 
-    out_path = PLOTS_DIR / "verdict_summary.png"
+    out_path = plots_dir / "verdict_summary.png"
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
     print(f"  {out_path.name}")
@@ -121,13 +117,16 @@ def plot_verdict_summary(all_results: dict[str, list]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="生成分析图表")
     parser.add_argument("--models", nargs="+", default=["single", "two-stage", "chain"])
+    parser.add_argument("--run-id", type=str, required=True, help="测试批次 ID")
     args = parser.parse_args()
 
-    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    analysis_dir = Path(__file__).resolve().parent.parent / "analysis"
+    plots_dir = analysis_dir / "plots" / args.run_id
+    plots_dir.mkdir(parents=True, exist_ok=True)
 
     all_results = {}
     for model in args.models:
-        report_path = ANALYSIS_DIR / "reports" / f"analysis_{model}.json"
+        report_path = analysis_dir / "reports" / args.run_id / f"analysis_{model}.json"
         if not report_path.exists():
             print(f"  跳过 {model}: 报告不存在")
             continue
@@ -137,14 +136,14 @@ def main() -> None:
     for model, results in all_results.items():
         print(f"\n{model}:")
         for r in results:
-            plot_harmonic_bars(r, model)
-            plot_spectrum_comparison(r, model)
-        plot_thd_comparison(all_results, model)
+            plot_harmonic_bars(r, model, plots_dir)
+            plot_spectrum_comparison(r, model, plots_dir)
+        plot_thd_comparison(all_results, model, plots_dir)
 
     if all_results:
-        plot_verdict_summary(all_results)
+        plot_verdict_summary(all_results, plots_dir)
 
-    print(f"\n图表已保存到 {PLOTS_DIR}")
+    print(f"\n图表已保存到 {plots_dir}")
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return super().default(obj)
 
-ANALYSIS_DIR = Path(__file__).resolve().parent.parent / "analysis"
+
 HARMONIC_ORDERS = 10
 
 
@@ -98,13 +98,13 @@ def check_pass(result: dict) -> dict:
     high_ratio = result["high_harmonic_ratio_pct"]
     harmonics_db = result["output_harmonics_db"]
 
-    衰减_ok = all(harmonics_db[i] >= harmonics_db[i + 1] for i in range(len(harmonics_db) - 2))
+    decaying = all(harmonics_db[i] >= harmonics_db[i + 1] for i in range(len(harmonics_db) - 2))
 
     checks = {
         "second_harmonic_dominant": sec_ratio >= 60,
         "thd_in_range": 0.5 <= thd <= 3.0,
         "high_harmonics_weak": high_ratio <= 5.0,
-        "harmonics_decaying": 衰减_ok,
+        "harmonics_decaying": decaying,
     }
     passed = sum(checks.values())
     if passed >= 4:
@@ -121,7 +121,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="分析 danji-cli 胆味特征")
     parser.add_argument("--input-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--f0", type=float, default=1000.0, help="基频 (Hz)")
+    parser.add_argument("--run-id", type=str, required=True, help="测试批次 ID，如 2026-06-25_001")
     parser.add_argument("--model", type=str, default="single")
     args = parser.parse_args()
 
@@ -144,7 +144,7 @@ def main() -> None:
         result["verdict"] = verdict
         results.append(result)
 
-    report_dir = ANALYSIS_DIR / "reports"
+    report_dir = Path(__file__).resolve().parent.parent / "analysis" / "reports" / args.run_id
     report_dir.mkdir(parents=True, exist_ok=True)
     report_path = report_dir / f"analysis_{args.model}.json"
     with open(report_path, "w") as f:
@@ -152,7 +152,7 @@ def main() -> None:
 
     print(f"\n分析报告已保存: {report_path}")
     print(f"\n{'='*60}")
-    print(f"  模型: {args.model}")
+    print(f"  模型: {args.model} | Run: {args.run_id}")
     print(f"{'='*60}")
     for r in results:
         v = r["verdict"]
