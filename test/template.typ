@@ -125,7 +125,8 @@
     let pass = total-pass(item.data)
     let total = item.data.len()
     let color = if pass == total { green } else if pass > 0 { orange } else { red }
-    summary.push([- #text(fill: color)[#(item.model)模型达标]（#pass/#(total)通过）])
+    let status = if pass == total { "达标" } else if pass > 0 { "部分达标" } else { "未达标" }
+    summary.push([- #text(fill: color)[#(item.model)模型#status]（#pass/#(total)通过）])
   }
   [*核心结论*：]
   summary.join()
