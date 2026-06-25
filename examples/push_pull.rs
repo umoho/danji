@@ -105,7 +105,7 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
     let mut pi_cfg = SimConfig::new(SR, pi_num);
     pi_cfg
         .add_resistor(v1b_g, g, 470_000.0)
-        .add_resistor(cath, g, 47_000.0)
+        .add_resistor(cath, g, 10_000.0)
         .add_resistor(v1a_p, pi_b, 100_000.0)
         .add_resistor(v1b_p, pi_b, 100_000.0)
         .add_resistor(pi_b, g, 1_000_000.0)
@@ -113,22 +113,13 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
         .add_triode(v1b_p, v1b_g, cath, 0)
         .input(v1a_g)
         .output(v1b_p)
-        .bplus(pi_b, 250.0);
+        .bplus(pi_b, 300.0);
 
     let mut pi = Simulator::new(pi_cfg, vec![TriodeParams::new_12ax7()], vec![], vec![]);
 
     // --- Push-pull output stage (EL84×2 + OPT + speaker) ---
-    // Nodes:
-    // 0: gnd
-    // 1: el84a_g (upper grid, input)
-    // 2: el84a_k
-    // 3: el84a_s
-    // 4: el84a_p
-    // 5: el84b_g (lower grid, input2)
-    // 6: el84b_k
-    // 7: el84b_s
-    // 8: el84b_p
-    // 9: ct_bp (also output)
+    // OPT: 100Ω DCR + 10H each half-primary
+    // Speaker output computed analytically from differential plate voltage
     let op_num = 10;
     let (eag, eak, eas, eap, ebg, ebk, ebs, ebp, ct) = (
         NodeId(1),
@@ -151,33 +142,36 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
         .add_resistor(eas, ct, 1_000.0) // screen resistor upper
         .add_resistor(ebs, ct, 1_000.0) // screen resistor lower
         .add_resistor(ct, g, 1_000_000.0) // B+ bleeder
-        // OPT: 100Ω DCR + 10H (same as pentode_stage)
         .add_resistor(eap, ct, 100.0)
         .add_inductor(eap, ct, 10.0)
         .add_resistor(ebp, ct, 100.0)
         .add_inductor(ebp, ct, 10.0)
         .add_pentode(eap, eag, eak, eas, 0) // EL84 upper
         .add_pentode(ebp, ebg, ebk, ebs, 0) // EL84 lower
-        .input(eag) // upper grid = input1
-        .input2(ebg) // lower grid = input2
-        .output(eap) // output = upper plate
-        .bplus(ct, 250.0);
+        .input(eag)
+        .input2(ebg)
+        .output(eap) // output = upper plate for logging
+        .bplus(ct, 300.0);
 
     let mut op = Simulator::new(op_cfg, vec![], vec![PentodeParams::new_el84()], vec![]);
 
     // Warmup: both Simulators
     for pi_ in 0..5000 {
-        pi.set_bplus(250.0 * (pi_ as f64) / 5000.0);
+        pi.set_bplus(300.0 * (pi_ as f64) / 5000.0);
         pi.process_sample(0.0)?;
     }
-    pi.set_bplus(250.0);
+    pi.set_bplus(300.0);
     for _ in 0..5000 {
         pi.process_sample(0.0)?;
     }
 
-    // Warmup output stage: set B+ immediately with longer idle
-    op.set_bplus(250.0);
-    for _ in 0..50000 {
+    // Warmup output stage: B+ ramp + settle
+    for i in 0..5000 {
+        op.set_bplus(300.0 * (i as f64) / 5000.0);
+        op.process_sample(0.0)?;
+    }
+    op.set_bplus(300.0);
+    for _ in 0..20000 {
         op.process_sample(0.0)?;
     }
 
@@ -220,9 +214,7 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
     let mut dc_block_a = 0.0;
     let mut dc_block_b = 0.0;
 
-    // Settle DC-block filters: run phase inverter with zero input to charge
-    // the filters to the steady-state plate DC voltage
-    // Keep output stage idling with zero inputs
+    // Settle DC-block filters: charge to steady-state plate DC with zero input
     for _ in 0..5000 {
         let _ = pi.process_sample(0.0)?;
         let vpa = pi.node_voltage(v1a_p) as f64;
@@ -231,34 +223,30 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
         dc_block_b += alpha * (vpb - dc_block_b);
         let _ = op.process_sample(0.0)?;
     }
-    // Now dc_block_a ≈ Vpa_DC, dc_block_b ≈ Vpb_DC
 
     for i in 0..n {
         let t = i as f64 / SR as f64;
-        let vin = (2.0 * PI * 1000.0 * t).sin() as f32 * 0.5;
+        let vin = (2.0 * PI * 1000.0 * t).sin() as f32 * 1.0;
 
-        // Phase inverter step
         let _ = pi.process_sample(vin)?;
         let vpa = pi.node_voltage(v1a_p) as f64;
         let vpb = pi.node_voltage(v1b_p) as f64;
 
-        // External AC coupling (DC block + RC filter)
         let ac_a = vpa - dc_block_a;
         dc_block_a += alpha * (vpa - dc_block_a);
         let ac_b = vpb - dc_block_b;
         dc_block_b += alpha * (vpb - dc_block_b);
 
-        // Output stage step with anti-phase drive
         let _ = op.process_sample_dual(ac_a as f32, ac_b as f64)?;
         vpa_log[i] = op.node_voltage(eap);
         vpb_log[i] = op.node_voltage(ebp);
     }
 
-    // Analyze output: differential plate voltage → speaker
+    // Analyze output: differential plate voltage → speaker via turns ratio
     let settle = (SR as f64 * 0.1) as usize;
     let vpa_steady = &vpa_log[settle..];
     let vpb_steady = &vpb_log[settle..];
-    let turns = (5000.0_f64 / 8.0).sqrt(); // 25:1 for push-pull half-primary
+    let turns = f64::sqrt(5000.0 / 8.0); // 25:1 for 5kΩ:8Ω
 
     let dc_a: f32 = vpa_steady.iter().sum::<f32>() / vpa_steady.len() as f32;
     let dc_b: f32 = vpb_steady.iter().sum::<f32>() / vpb_steady.len() as f32;
@@ -271,7 +259,7 @@ fn test_full_push_pull() -> Result<(), danji::DanjiError> {
     let pwr_mw = spk_rms * spk_rms / 8.0 * 1000.0;
 
     println!();
-    println!("=== Push-Pull AC (1kHz, 0.5Vpk input) ===");
+    println!("=== Push-Pull AC (1kHz, 1.0Vpk input, 10kΩ LTP tail) ===");
     println!("Speaker: {:.1} mV RMS, {:.1} mW", spk_rms * 1000.0, pwr_mw);
 
     Ok(())

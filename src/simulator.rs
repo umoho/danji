@@ -251,9 +251,10 @@ impl Simulator {
     }
 
     pub fn process_sample_dual(&mut self, input1: f32, input2: f64) -> Result<f32, DanjiError> {
+        let prev = self.config.input2_voltage;
         self.config.input2_voltage = input2;
         let result = self.process_sample(input1);
-        self.config.input2_voltage = 0.0;
+        self.config.input2_voltage = if result.is_ok() { 0.0 } else { prev };
         result
     }
 

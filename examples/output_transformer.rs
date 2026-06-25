@@ -5,9 +5,8 @@ fn main() -> Result<(), danji::DanjiError> {
     env_logger::init();
 
     // SE power stage: 12AU7 driver → OPT (ideal) → 8Ω speaker
-    // OPT modeled as: Lp || (ideal transformer N:1)
-    // Primary: Lp from plate to B+ (AC load)
-    // Secondary: Vs = Vp_AC / N, power transfer
+    // OPT primary: 100Ω DCR + 10H magnetizing inductance
+    // Reflected load 5kΩ = N² × 8Ω → N = 25:1
     let mut cfg = SimConfig::new(sr, 5);
     let (gnd, grid, cathode, plate, bplus) =
         (NodeId(0), NodeId(1), NodeId(2), NodeId(3), NodeId(4));
@@ -15,8 +14,8 @@ fn main() -> Result<(), danji::DanjiError> {
     cfg.add_resistor(cathode, gnd, 1_000.0)
         .add_resistor(grid, gnd, 470_000.0)
         .add_resistor(bplus, gnd, 1e6)
-        .add_inductor(plate, bplus, 10.0) // OPT primary magnetizing inductance
-        .add_resistor(plate, bplus, 5_000.0) // reflected load (Zp = 5kΩ)
+        .add_resistor(plate, bplus, 100.0) // OPT primary DCR
+        .add_inductor(plate, bplus, 10.0) // OPT primary inductance
         .add_triode(plate, grid, cathode, 0)
         .input(grid)
         .output(plate)
@@ -24,6 +23,12 @@ fn main() -> Result<(), danji::DanjiError> {
 
     let mut sim = Simulator::new(cfg, vec![TriodeParams::new_12au7()], vec![], vec![]);
 
+    // B+ ramp warmup
+    for i in 0..5000 {
+        sim.set_bplus(350.0 * (i as f64) / 5000.0);
+        sim.process_sample(0.0)?;
+    }
+    sim.set_bplus(350.0);
     for _ in 0..5000 {
         sim.process_sample(0.0)?;
     }
@@ -50,7 +55,7 @@ fn main() -> Result<(), danji::DanjiError> {
     let ac_rms_speaker = (ac_rms.sqrt() / turns_ratio) as f32;
 
     println!("=== Single-Ended Power Stage (12AU7 + OPT) ===");
-    println!("B+: 350V, OPT: 10H + 5kΩ load, N={:.0}:1", turns_ratio);
+    println!("B+: 350V, OPT: 100Ω DCR + 10H, N={:.0}:1", turns_ratio);
     println!("Input: {:.0} mV peak, 1 kHz", amplitude * 1000.0);
     println!("Plate DC: {:.0} V", dc);
     println!("Speaker RMS: {:.1} V", ac_rms_speaker);
