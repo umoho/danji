@@ -4,3 +4,10 @@
 *.swo
 *~
 .cargo
+
+# test 产物
+test/.venv/
+test/input/
+test/output/
+test/analysis/plots/
+test/analysis/reports/
