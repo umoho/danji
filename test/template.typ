@@ -1,10 +1,9 @@
-// danji-cli 胆味测试报告 — 自动生成
-// 数据来源: analysis/reports/<run-id>/
+// danji-cli 胆味测试报告模板
+// 用法: typst compile --root test/ test/template.typ output.pdf --input run-id=2026-06-25_001
 
 #set document(
   title: "danji-cli 胆味测试报告",
   author: "danji 测试框架",
-  date: datetime(year: 2026, month: 6, day: 25),
 )
 
 #set page(
@@ -12,7 +11,7 @@
   margin: 2.5cm,
   header: [
     #set text(size: 8pt, fill: gray)
-    #h(1fr) danji-cli 测试报告 — Run 2026-06-25_001
+    #h(1fr) danji-cli 测试报告 — Run #sys.inputs.at("run-id", default: "unknown")
   ],
   footer: [
     #set text(size: 8pt, fill: gray)
@@ -36,23 +35,12 @@
   block(above: 1.2em, below: 0.6em)[#it]
 }
 
-// ===== 数据加载 =====
-#let run-id = "2026-06-25_001"
-#let report-dir = "analysis/reports/" + run-id
-#let plots-dir = "analysis/plots/" + run-id
-
-#let single-data = json(report-dir + "/analysis_single.json")
-#let twostage-data = json(report-dir + "/analysis_two-stage.json")
-#let chain-data = json(report-dir + "/analysis_chain.json")
-
 // ===== 辅助函数 =====
 #let verdct-color(verdict) = {
   if verdict == "PASS" { green }
   else if verdict == "BORDERLINE" { orange }
   else { red }
 }
-
-#let verdct-text(v) = text(fill: verdct-color(v.verdict))[#v.verdict]
 
 #let fmt-thd(val) = {
   str(calc.round(val, digits: 3)) + "%"
@@ -74,7 +62,8 @@
         str(r.f0_hz) + " Hz"
       }
       let decay = if r.verdict.checks.harmonics_decaying [✓] else [✗]
-      ([#f0], [#fmt-thd(r.output_thd_pct)], [#fmt-pct(r.second_harmonic_ratio_pct)], [#fmt-pct(r.high_harmonic_ratio_pct)], [#decay], [#verdct-text(r.verdict)])
+      let vc = verdct-color(r.verdict.verdict)
+      ([#f0], [#fmt-thd(r.output_thd_pct)], [#fmt-pct(r.second_harmonic_ratio_pct)], [#fmt-pct(r.high_harmonic_ratio_pct)], [#decay], [#text(fill: vc)[#r.verdict.verdict]])
     }).flatten()
   )
 }
@@ -95,23 +84,40 @@
   else { "10 kHz" }
 }
 
-// ===== 报告正文 =====
+#let model-label(m) = {
+  if m == "single" { "single 模型（单管共阴极放大）" }
+  else if m == "two-stage" { "two-stage 模型（级联双级放大）" }
+  else { "chain 模型（完整前级链）" }
+}
 
+// ===== 主体 =====
+#let run-id = sys.inputs.at("run-id", default: "2026-06-25_001")
+#let data-dir = "analysis/reports/" + run-id
+#let plots-dir = "analysis/plots/" + run-id
+#let models = ("single", "two-stage", "chain")
+
+// 加载所有数据
+#let all-data = ()
+#for model in models {
+  let d = json(data-dir + "/analysis_" + model + ".json")
+  all-data.push((model: model, data: d))
+}
+
+// ===== 摘要 =====
 = 摘要
 
-本报告记录 danji-cli 胆机放大器仿真工具的"胆味"测试结果。测试基于学术论文定义的合格标准，对三种放大器模型（single / two-stage / chain）进行谐波分析和 THD 计算。
+本报告记录 danji-cli 胆机放大器仿真工具的"胆味"测试结果。
 
 #{
-  let s-pass = total-pass(single-data)
-  let s-total = single-data.len()
-  let tw-pass = total-pass(twostage-data)
-  let c-pass = total-pass(chain-data)
-
-  [*核心结论*：
-  - #text(fill: green)[single 模型达标]（#s-pass/#s-total 通过）
-  - #text(fill: red)[two-stage 模型未达标]（#tw-pass/#twostage-data.len() 通过）
-  - #text(fill: red)[chain 模型未达标]（#c-pass/#chain-data.len() 通过）
-  ]
+  let summary = ()
+  for item in all-data {
+    let pass = total-pass(item.data)
+    let total = item.data.len()
+    let color = if pass == total { green } else if pass > 0 { orange } else { red }
+    summary.push([- #text(fill: color)[#item.model 模型达标]（#pass/#total 通过）])
+  }
+  [*核心结论*：]
+  summary.join()
 }
 
 = 测试方法
@@ -156,7 +162,6 @@
     [分析工具], [Python 3.13 + numpy + scipy + matplotlib],
     [测试信号], [100 Hz / 1 kHz / 10 kHz 正弦波, -6 dBFS, 2s],
     [采样率], [44100 Hz],
-    [模型], [single / two-stage / chain],
     [Run ID], [#run-id],
   ),
   caption: [测试环境配置],
@@ -164,69 +169,42 @@
 
 = 测试结果
 
-== single 模型（单管共阴极放大）
+#for item in all-data {
+  let model = item.model
+  let data = item.data
 
-#figure(
-  make-table(single-data),
-  caption: [single 模型测试结果],
-)
+  [== #model-label(model)]
 
-#{
-  let avg-thd = single-data.map(r => r.output_thd_pct).fold(0.0, (a, b) => a + b) / single-data.len()
-  let avg-2nd = single-data.map(r => r.second_harmonic_ratio_pct).fold(0.0, (a, b) => a + b) / single-data.len()
-  [平均 THD：#fmt-thd(avg-thd)，平均二次谐波占比：#fmt-pct(avg-2nd)。]
-}
-
-#for r in single-data [
-  === #f0-label(r) 谐波频谱
-
-  #figure(
-    image(plots-dir + "/harmonics_single_sine_" + f0-name(r) + ".png", width: 80%),
-    caption: [single 模型 #f0-label(r) 谐波频谱],
+  figure(
+    make-table(data),
+    caption: [#model 模型测试结果],
   )
-]
 
-== two-stage 模型（级联双级放大）
+  {
+    let avg-thd = data.map(r => r.output_thd_pct).fold(0.0, (a, b) => a + b) / data.len()
+    let avg-2nd = data.map(r => r.second_harmonic_ratio_pct).fold(0.0, (a, b) => a + b) / data.len()
+    [平均 THD：#fmt-thd(avg-thd)，平均二次谐波占比：#fmt-pct(avg-2nd)。]
+  }
 
-#figure(
-  make-table(twostage-data),
-  caption: [two-stage 模型测试结果],
-)
+  for r in data [
+    === #f0-label(r) 谐波频谱
 
-#{
-  let avg-thd = twostage-data.map(r => r.output_thd_pct).fold(0.0, (a, b) => a + b) / twostage-data.len()
-  [平均 THD：#fmt-thd(avg-thd)，远超合格范围（0.5%-3%），存在严重削波。]
-}
+    #figure(
+      image(plots-dir + "/harmonics_" + model + "_sine_" + f0-name(r) + ".png", width: 80%),
+      caption: [#model 模型 #f0-label(r) 谐波频谱],
+    )
 
-#for r in twostage-data [
-  === #f0-label(r) 谐波频谱
+    #figure(
+      image(plots-dir + "/spectrum_" + model + "_sine_" + f0-name(r) + ".png", width: 80%),
+      caption: [#model 模型 #f0-label(r) 频谱对比（输入 vs 输出）],
+    )
+  ]
 
-  #figure(
-    image(plots-dir + "/harmonics_two-stage_sine_" + f0-name(r) + ".png", width: 80%),
-    caption: [two-stage 模型 #f0-label(r) 谐波频谱],
+  figure(
+    image(plots-dir + "/thd_" + model + ".png", width: 70%),
+    caption: [#model 模型 THD 对比],
   )
-]
-
-== chain 模型（完整前级链）
-
-#figure(
-  make-table(chain-data),
-  caption: [chain 模型测试结果],
-)
-
-#{
-  let avg-thd = chain-data.map(r => r.output_thd_pct).fold(0.0, (a, b) => a + b) / chain-data.len()
-  [平均 THD：#fmt-thd(avg-thd)，与 two-stage 模型表现相似。]
 }
-
-#for r in chain-data [
-  === #f0-label(r) 谐波频谱
-
-  #figure(
-    image(plots-dir + "/harmonics_chain_sine_" + f0-name(r) + ".png", width: 80%),
-    caption: [chain 模型 #f0-label(r) 谐波频谱],
-  )
-]
 
 == 结果汇总
 
@@ -235,29 +213,15 @@
   caption: [测试结果汇总饼图],
 )
 
-#figure(
-  image(plots-dir + "/thd_single.png", width: 70%),
-  caption: [single 模型 THD 对比（绿色/红色线为合格范围）],
-)
-
 = 讨论
 
 == single 模型为何合格
 
 single 模型采用单管共阴极放大拓扑，增益约 62 倍。在输入 -6 dBFS（幅度 0.5V）的条件下，输出仍在电子管的线性工作区内，产生适量的偶次谐波失真，这正是胆味的声学基础。
 
-#{
-  let avg-thd = single-data.map(r => r.output_thd_pct).fold(0.0, (a, b) => a + b) / single-data.len()
-  [THD 约 #fmt-thd(avg-thd) 处于胆机的典型范围（0.5%-3%）内，听感上表现为温暖、甜美的音色。]
-}
-
 == two-stage / chain 模型为何失败
 
 两级 12AX7 级联的理论增益约 9022 倍（约 79 dB），远超单级。即使输入信号幅度很小，第二级也会进入深度非线性区，产生大量奇次谐波和高次谐波。这与胆机"偶次谐波主导、高次谐波微弱"的特征完全相反。
-
-== 与文献对比
-
-根据 Maleczek (2012) 的研究，真实胆机在 1 W 输出功率下的 THD 约为 0.15%-0.2%，而 danji-cli 的 single 模型 THD 约 2.6%，处于较高水平。但考虑到 danji-cli 模拟的是前级放大（非功率放大级），且未使用负反馈，这一数值是合理的。
 
 = 结论与建议
 

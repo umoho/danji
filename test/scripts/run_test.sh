@@ -15,7 +15,6 @@ if [ $# -ge 1 ]; then
     RUN_ID="$1"
 else
     DATE=$(date +%Y-%m-%d)
-    # 查找当天已有最大序号
     EXISTING=$(ls -d "$TEST_DIR/analysis/reports/${DATE}_"* 2>/dev/null | wc -l | tr -d ' ')
     SEQ=$(printf "%03d" $((EXISTING + 1)))
     RUN_ID="${DATE}_${SEQ}"
@@ -34,12 +33,12 @@ fi
 
 # 1. 生成测试音频
 echo ""
-echo "[1/3] 生成测试音频..."
+echo "[1/4] 生成测试音频..."
 uv run python "$SCRIPT_DIR/generate_test_audio.py"
 
 # 2. 用 danji-cli 处理
 echo ""
-echo "[2/3] 处理测试音频..."
+echo "[2/4] 处理测试音频..."
 for model in "${MODELS[@]}"; do
     echo "  Model: $model"
     for f in "$TEST_DIR"/input/sine_*.wav; do
@@ -51,7 +50,7 @@ done
 
 # 3. 分析
 echo ""
-echo "[3/3] 分析结果..."
+echo "[3/4] 分析结果..."
 for model in "${MODELS[@]}"; do
     echo "  Model: $model"
     uv run python "$SCRIPT_DIR/analyze.py" \
@@ -68,9 +67,20 @@ uv run python "$SCRIPT_DIR/plot_results.py" \
     --models "${MODELS[@]}" \
     --run-id "$RUN_ID"
 
+# 5. 编译 typst 报告
+echo ""
+echo "[5/5] 编译报告..."
+REPORT_PDF="$TEST_DIR/reports/${RUN_ID}_report.pdf"
+typst compile --root "$TEST_DIR" \
+    "$TEST_DIR/template.typ" \
+    "$REPORT_PDF" \
+    --input "run-id=$RUN_ID" 2>&1 | sed 's/^/    /'
+echo "  PDF: $REPORT_PDF"
+
 echo ""
 echo "============================================"
 echo "  测试完成!"
-echo "  报告: analysis/reports/$RUN_ID/"
+echo "  数据: analysis/reports/$RUN_ID/"
 echo "  图表: analysis/plots/$RUN_ID/"
+echo "  报告: reports/${RUN_ID}_report.pdf"
 echo "============================================"
