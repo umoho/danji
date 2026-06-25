@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 danji = { path = ".." }
 cpal = "0.17"
+log = "0.4"
+ctrlc = "3"
+hound = "3"
