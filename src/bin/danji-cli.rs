@@ -51,7 +51,7 @@ fn build_two_stage() -> (Simulator, Simulator) {
     (s1, s2)
 }
 
-fn build_chain() -> (Vec<f32>, Simulator, Simulator, Simulator) {
+fn build_chain(bplus: f64) -> (Vec<f32>, Simulator, Simulator, Simulator) {
     let sr = 44100u32;
     let n = sr as usize;
     let mut p = SimConfig::new(sr, 4);
@@ -67,7 +67,7 @@ fn build_chain() -> (Vec<f32>, Simulator, Simulator, Simulator) {
     let mut bp_v = vec![0.0f32; n];
     for (i, v) in bp_v.iter_mut().enumerate() {
         let t = i as f64 / sr as f64;
-        let vac = (300.0 * (2.0 * std::f64::consts::PI * 60.0 * t).sin().abs()) as f32;
+        let vac = (bplus * (2.0 * std::f64::consts::PI * 60.0 * t).sin().abs()) as f32;
         psu.process_sample(vac).unwrap();
         *v = psu.node_voltage(bp);
     }
@@ -76,11 +76,11 @@ fn build_chain() -> (Vec<f32>, Simulator, Simulator, Simulator) {
     let mut s1 = Simulator::new(sc.clone(), vec![TriodeParams::new_12ax7()], vec![], vec![]);
     let mut s2 = Simulator::new(sc, vec![TriodeParams::new_12ax7()], vec![], vec![]);
     for _ in 0..3000 {
-        s1.set_bplus(300.0);
+        s1.set_bplus(bplus);
         s1.process_sample(0.0).unwrap();
     }
     for _ in 0..3000 {
-        s2.set_bplus(300.0);
+        s2.set_bplus(bplus);
         s2.process_sample(0.0).unwrap();
     }
     (bp_v, s1, s2, {
@@ -118,15 +118,9 @@ fn process(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         samples.len() as f64 / spec.sample_rate as f64
     );
     eprintln!(
-        "Model: {}, B+={}V, gain={}dB",
-        args.model, args.bplus, args.gain
+        "Model: {}, B+={}V, gain={}dB, mix={}",
+        args.model, args.bplus, args.gain, args.mix
     );
-
-    let dry: Vec<f32> = samples
-        .iter()
-        .map(|s| s * args.mix + samples[0] * (1.0 - args.mix))
-        .collect();
-    drop(dry); // not used yet
 
     let output: Vec<f32> = match args.model.as_str() {
         "single" => {
@@ -164,7 +158,7 @@ fn process(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
                 .collect()
         }
         "chain" => {
-            let (bp_v, mut s1, mut s2, mut tone) = build_chain();
+            let (bp_v, mut s1, mut s2, mut tone) = build_chain(args.bplus);
             let h = 1.0 / spec.sample_rate as f64;
             let tau = 1_000_000.0 * 0.022e-6;
             let a = 1.0 - (-h / tau).exp();
@@ -193,6 +187,12 @@ fn process(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     };
+
+    let output: Vec<f32> = output
+        .iter()
+        .zip(samples.iter())
+        .map(|(&w, &d)| w * args.mix + d * (1.0 - args.mix))
+        .collect();
 
     // AC-couple: remove DC offset, then normalize
     let dc_offset: f32 = output.iter().sum::<f32>() / output.len() as f32;
