@@ -94,6 +94,26 @@ impl SimConfig {
         self
     }
 
+    pub fn add_coupled_inductor3(
+        &mut self,
+        p1: NodeId,
+        ct: NodeId,
+        p2: NodeId,
+        s1: NodeId,
+        s2: NodeId,
+        l1: f64,
+        l2: f64,
+        l3: f64,
+        k12: f64,
+        k13: f64,
+        k23: f64,
+    ) -> &mut Self {
+        self.coupled_inductors3.push(CoupledInductor3::new(
+            p1, ct, p2, s1, s2, l1, l2, l3, k12, k13, k23,
+        ));
+        self
+    }
+
     pub fn add_triode(
         &mut self,
         plate: NodeId,
@@ -276,6 +296,59 @@ impl Simulator {
             let d2 = h * rdc_sec / ci.l_secondary;
             ci.i1_prev = (1.0 - d1) * ci.i1_prev + g11 * v_p + g12 * v_s;
             ci.i2_prev = (1.0 - d2) * ci.i2_prev + g12 * v_p + g22 * v_s;
+        }
+
+        for ci in &mut self.config.coupled_inductors3 {
+            let v = [
+                if ci.p1.0 > 0 {
+                    self.solver.v[ci.p1.0]
+                } else {
+                    0.0
+                } - if ci.ct.0 > 0 {
+                    self.solver.v[ci.ct.0]
+                } else {
+                    0.0
+                },
+                if ci.p2.0 > 0 {
+                    self.solver.v[ci.p2.0]
+                } else {
+                    0.0
+                } - if ci.ct.0 > 0 {
+                    self.solver.v[ci.ct.0]
+                } else {
+                    0.0
+                },
+                if ci.s1.0 > 0 {
+                    self.solver.v[ci.s1.0]
+                } else {
+                    0.0
+                } - if ci.s2.0 > 0 {
+                    self.solver.v[ci.s2.0]
+                } else {
+                    0.0
+                },
+            ];
+            let ls = [ci.l1, ci.l2, ci.l3];
+            let m12 = ci.k12 * (ls[0] * ls[1]).sqrt();
+            let m13 = ci.k13 * (ls[0] * ls[2]).sqrt();
+            let m23 = ci.k23 * (ls[1] * ls[2]).sqrt();
+            let det = ls[0] * ls[1] * ls[2] + 2.0 * m12 * m13 * m23
+                - ls[0] * m23 * m23
+                - ls[1] * m13 * m13
+                - ls[2] * m12 * m12;
+            if det <= 1e-30 {
+                continue;
+            }
+            let y00 = h * (ls[1] * ls[2] - m23 * m23) / det;
+            let y11 = h * (ls[0] * ls[2] - m13 * m13) / det;
+            let y22 = h * (ls[0] * ls[1] - m12 * m12) / det;
+            let y01 = h * (m13 * m23 - ls[2] * m12) / det;
+            let y02 = h * (m12 * m23 - ls[1] * m13) / det;
+            let y12 = h * (m12 * m13 - ls[0] * m23) / det;
+            let d = (h * 150.0 / ls[0]).min(0.5); // primary DCR damping
+            ci.i1_prev = (1.0 - d) * ci.i1_prev + y00 * v[0] + y01 * v[1] + y02 * v[2];
+            ci.i2_prev = (1.0 - d) * ci.i2_prev + y01 * v[0] + y11 * v[1] + y12 * v[2];
+            ci.i3_prev = (1.0 - d) * ci.i3_prev + y02 * v[0] + y12 * v[1] + y22 * v[2];
         }
 
         self.sample_count += 1;

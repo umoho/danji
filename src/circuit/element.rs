@@ -102,11 +102,8 @@ pub struct CoupledInductor3 {
     pub k12: f64,
     pub k13: f64,
     pub k23: f64,
-    #[allow(dead_code)]
     pub(crate) i1_prev: f64,
-    #[allow(dead_code)]
     pub(crate) i2_prev: f64,
-    #[allow(dead_code)]
     pub(crate) i3_prev: f64,
 }
 

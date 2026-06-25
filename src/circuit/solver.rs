@@ -181,7 +181,88 @@ impl CircuitSolver {
                 }
             }
 
-            // TODO: 3-winding coupled inductor (push-pull) - needs proper MNA stamp
+            for ci in &circuit.coupled_inductors3 {
+                // Windings: 0=p1-ct, 1=p2-ct, 2=s1-s2
+                // Terminal node arrays: pos = [p1, p2, s1], neg = [ct, ct, s2]
+                let pos = [ci.p1.0, ci.p2.0, ci.s1.0];
+                let neg = [ci.ct.0, ci.ct.0, ci.s2.0];
+                let ls = [ci.l1, ci.l2, ci.l3];
+                let ks = [ci.k12, ci.k13, ci.k23];
+                let m12 = ks[0] * (ls[0] * ls[1]).sqrt();
+                let m13 = ks[1] * (ls[0] * ls[2]).sqrt();
+                let m23 = ks[2] * (ls[1] * ls[2]).sqrt();
+                let det = ls[0] * ls[1] * ls[2] + 2.0 * m12 * m13 * m23
+                    - ls[0] * m23 * m23
+                    - ls[1] * m13 * m13
+                    - ls[2] * m12 * m12;
+                if det <= 1e-30 {
+                    warn!("CoupledInductor3 det={:.2e}", det);
+                    continue;
+                }
+                // Admittance matrix Y = h * L⁻¹ (3×3 symmetric)
+                let y = [
+                    h * (ls[1] * ls[2] - m23 * m23) / det, // Y00
+                    h * (ls[0] * ls[2] - m13 * m13) / det, // Y11
+                    h * (ls[0] * ls[1] - m12 * m12) / det, // Y22
+                    h * (m13 * m23 - ls[2] * m12) / det,   // Y01 = Y10
+                    h * (m12 * m23 - ls[1] * m13) / det,   // Y02 = Y20
+                    h * (m12 * m13 - ls[0] * m23) / det,   // Y12 = Y21
+                ];
+
+                for i in 0..3 {
+                    let pi = pos[i];
+                    let ni = neg[i];
+                    let yii = [y[0], y[1], y[2]][i];
+                    // Self-admittance
+                    if pi > 0 {
+                        self.g[pi][pi] += yii;
+                    }
+                    if ni > 0 {
+                        self.g[ni][ni] += yii;
+                    }
+                    if pi > 0 && ni > 0 {
+                        self.g[pi][ni] -= yii;
+                        self.g[ni][pi] -= yii;
+                    }
+                    // History current source: current I_prev flows pos→neg
+                    // I_prev enters pos, leaves neg
+                    let iprev = [ci.i1_prev, ci.i2_prev, ci.i3_prev][i];
+                    if pi > 0 {
+                        self.i[pi] -= iprev;
+                    }
+                    if ni > 0 {
+                        self.i[ni] += iprev;
+                    }
+
+                    // Mutual coupling to other windings
+                    for j in (i + 1)..3 {
+                        let pj = pos[j];
+                        let nj = neg[j];
+                        let yij = match (i, j) {
+                            (0, 1) | (1, 0) => y[3],
+                            (0, 2) | (2, 0) => y[4],
+                            (1, 2) | (2, 1) => y[5],
+                            _ => unreachable!(),
+                        };
+                        if pi > 0 && pj > 0 {
+                            self.g[pi][pj] += yij;
+                            self.g[pj][pi] += yij;
+                        }
+                        if pi > 0 && nj > 0 {
+                            self.g[pi][nj] -= yij;
+                            self.g[nj][pi] -= yij;
+                        }
+                        if ni > 0 && pj > 0 {
+                            self.g[ni][pj] -= yij;
+                            self.g[pj][ni] -= yij;
+                        }
+                        if ni > 0 && nj > 0 {
+                            self.g[ni][nj] += yij;
+                            self.g[nj][ni] += yij;
+                        }
+                    }
+                }
+            }
 
             for tri in &circuit.triodes {
                 let p = tri.plate.0;
