@@ -24,13 +24,13 @@
 | 模块 | 文件 | 状态 |
 |------|------|------|
 | 三极管模型 (Koren) | `tube/triode.rs` | ✅ 9 管型 |
-| 五极管模型 (Koren) | `tube/pentode.rs` | ✅ 5 管型 |
+| 五极管模型 (Koren) | `tube/pentode.rs` | ✅ 5 管型（含 NaN/溢出防护） |
 | 真空二极管模型 | `tube/diode.rs` | ✅ 4 管型 |
 | 管型参数库 | `tube/params.rs` | ✅ 三极管 9 + 五极管 5 |
 | 电阻/电容/电感元件 | `circuit/element.rs` | ✅ |
-| 耦合电感 (变压器) | `circuit/element.rs` | ✅ 需数值阻尼 |
-| MNA 求解器 | `circuit/solver.rs` | ✅ 高斯消元 + 牛顿迭代 |
-| 仿真器封装 | `simulator.rs` | ✅ process_buffer/process_sample |
+| 耦合电感 (变压器) | `circuit/element.rs` | ✅ 需数值阻尼 + 耦合电导 |
+| MNA 求解器 | `circuit/solver.rs` | ✅ 无主元高斯消元 + 牛顿迭代 |
+| 仿真器封装 | `simulator.rs` | ✅ process_buffer/process_sample / process_sample_dual |
 | 公共 API | `api.rs` | ✅ |
 | DanjiError 错误类型 | `error.rs` | ✅ 6 种变体 |
 | CLI 音频处理器 | `bin/danji-cli.rs` | ✅ WAV 输入输出 |
@@ -45,9 +45,11 @@
 | 电源滤波 | `examples/power_supply.rs` | 5AR4 + 单 C 滤波, 297V |
 | CRC π 型滤波 | `examples/psu_clc.rs` | 100R + 2×47µF, 纹波 0.044V |
 | 完整前级链 | `examples/full_chain.rs` | 电源→前级×2→音调→输出 |
-| 输出变压器 | `examples/output_transformer.rs` | 12AU7 + OPT, 25:1 变比 |
+| 输出变压器 | `examples/output_transformer.rs` | 12AU7 + OPT, 25:1 (B+ 缓启修复) |
 | 五极管功率级 | `examples/pentode_stage.rs` | EL84 + 5kΩ 负载 |
+| 推挽功率级 | `examples/push_pull.rs` | 12AX7 倒相器 + EL84×2 + OPT |
 | 性能基准 | `examples/benchmark.rs` | 多采样率测试 |
+| 采样率基准 | `examples/sr_bench.rs` | 多采样率对比 |
 | 特性曲线 | `examples/plot_curves.rs` | 12AX7 曲线数据 |
 
 ### 2.3 单元测试
@@ -60,11 +62,12 @@
 
 ### 2.4 已知问题
 
-| 问题 | 根因 | 影响 |
-|------|------|------|
-| **BE 电容短路** | 大电容在 BE 模型下 Gc=C/h 可达 1S (1Ω)，短接到地 | 22µF 屏栅旁路电容无法使用 |
-| **BE 电感发散** | 无损耗电感器 BE 积分 I[n]=I[n-1]+h/L×V[n] 在 DC 下累积 | 10H 扼流圈需要外加阻尼 |
-| **耦合电感 DC 累积** | 耦合电感的 BE 模型同样无 DC 损耗 | 需 Rdc 阻尼因子 |
+| 问题 | 根因 | 影响 | 状态 |
+|------|------|------|------|
+| **BE 电容短路** | 大电容在 BE 模型下 Gc=C/h 可达 1S (1Ω) | 22µF 旁路电容无法直接在 MNA 中使用 | 外部 RC 滤波规避 |
+| **BE 电感发散** | 无损耗电感器 BE 积分在 DC 下累积 | 10H 扼流圈需阻尼 | 已加 (1-d) 阻尼因子 |
+| **耦合电感收敛** | BE 下 L/h ≈ 110kΩ (2.5H @ 44.1kHz)，与管非线性交互时 Newton 震荡 | 大电感耦合电感在单 Sim 中难收敛 | 双 Sim + 简单电感替代 |
+| **NaN/Inf 传播** | Koren 模型 exp() 溢出、Vpk<0 时 Inf·atan(0)=NaN | 牛顿迭代发散 | 已加 Vpk 守卫 + exp 溢出守卫 |
 
 ---
 
@@ -103,16 +106,11 @@ danji/
 │   ├── full_chain.rs
 │   ├── output_transformer.rs
 │   ├── pentode_stage.rs
+│   ├── push_pull.rs
 │   ├── benchmark.rs
 │   ├── sr_bench.rs
 │   └── plot_curves.rs
 └── devlog/
-    ├── 2026-06-24-initial-implementation.md
-    ├── 2026-06-24-fixes-and-two-stage.md
-    ├── 2026-06-24-diode-tone-psu.md
-    ├── 2026-06-24-full-chain-psu.md
-    ├── 2026-06-24-output-transformer.md
-    └── 2026-06-24-pentode.md
 ```
 
 ### 3.2 核心类型
@@ -241,9 +239,9 @@ $$
 
 ### 4.6 求解器
 
-- **线性部分**：高斯消元 + 部分主元消去，矩阵最大 30×30
+- **线性部分**：无主元高斯消元（MNA 矩阵天然对角占优，部分主元在 VSRC_G=1e6 与栅极 G=2e-6 共存的矩阵中导致 catastrophic cancellation），矩阵最大 30×30
 - **非线性部分**：牛顿-拉夫森迭代（最大 50 次，容差 1e-9）
-- **步长限制**：前 5 次迭代限制 50V，之后限制 200V
+- **NaN 守卫**：收敛时检查 v 中是否有 NaN/Inf，防止静默传播
 - **电压源**：大电导法（`VSRC_G = 1e6`）
 
 ---
@@ -256,6 +254,7 @@ impl Simulator {
                pentode_params: Vec<PentodeParams>, diode_params: Vec<DiodeParams>) -> Self;
     pub fn process_buffer(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), DanjiError>;
     pub fn process_sample(&mut self, input: f32) -> Result<f32, DanjiError>;
+    pub fn process_sample_dual(&mut self, input1: f32, input2: f64) -> Result<f32, DanjiError>;
     pub fn reset(&mut self);
     pub fn set_bplus(&mut self, voltage: f64);
     pub fn node_voltage(&self, node: NodeId) -> f32;
@@ -293,9 +292,9 @@ impl SimConfig {
 
 | 功能 | 优先级 | 说明 |
 |------|--------|------|
-| BE 数值稳定性修复 | 高 | 大电容短路 + 电感发散 + 耦合电感阻尼 |
-| 推挽输出变压器 | 中 | 中心抽头初级 |
-| WGSL GPU 加速 | 低 | CPU 实现足够 |
+| 耦合电感收敛修复 | 高 | 将 DCR 纳入 Z⁻¹ stamp，解决 BE 下 L/h 阻抗过大导致的 Newton 发散 |
+| 大电容 MNA 直连 | 中 | 当前用 RC 滤波规避，理想方案是在 MNA 中正确处理隔直耦合 |
+| WGSL GPU 加速 | 低 | CPU 实现足够（44.1kHz 下单管 12x 实时） |
 | 直接耦合多级 MNA | 低 | 当前独立级联架构可用 |
 | 实时音频插件 | 低 | VST3/AU 封装 |
 
@@ -309,5 +308,5 @@ impl SimConfig {
 
 ---
 
-*文档版本: 0.2.0*
-*最后更新: 2026-06-24*
+*文档版本: 0.3.0*
+*最后更新: 2026-06-25*
