@@ -1,5 +1,5 @@
 [workspace]
-members = ["danji-cli", "danji-realtime"]
+members = ["danji-cli", "danji-realtime", "danji-ctrl"]
 
 [package]
 name = "danji"
