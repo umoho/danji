@@ -12,7 +12,7 @@
   margin: 2.5cm,
   header: [
     #set text(size: 8pt, fill: gray)
-    #h(1fr) danji-cli测试报告 — Run #sys.inputs.at("run-id", default: "unknown")
+    #h(1fr) danji-cli测试报告 — 报告编号: #sys.inputs.at("run-id", default: "unknown")
   ],
   footer: [
     #set text(size: 8pt, fill: gray)
@@ -21,19 +21,29 @@
 )
 
 #set text(
-  font: ("PingFang SC", "Helvetica Neue"),
-  size: 11pt,
+  font: ("Source Han Serif SC", "Times New Roman"),
+  size: 12pt, // 小四号
   lang: "zh",
 )
 
-#set heading(numbering: "1.")
 #show heading.where(level: 1): it => {
-  set text(size: 16pt, weight: "bold")
+  set text(font: ("Source Han Sans SC", "Arial"), size: 16pt, weight: "bold") // 三号
   block(above: 1.5em, below: 0.8em)[#it]
 }
 #show heading.where(level: 2): it => {
-  set text(size: 13pt, weight: "bold")
+  set text(font: ("Source Han Sans SC", "Arial"), size: 14pt, weight: "bold") // 四号
   block(above: 1.2em, below: 0.6em)[#it]
+}
+#show heading.where(level: 3): it => {
+  set text(font: ("Source Han Sans SC", "Arial"), size: 12pt, weight: "bold") // 小四号
+  block(above: 1em, below: 0.5em)[#it]
+}
+
+#set heading(numbering: "1.")
+
+// ===== 引用标注 =====
+#let ref(num) = {
+  super[[#num]]
 }
 
 // ===== 辅助函数 =====
@@ -125,7 +135,7 @@
 
 == "胆味"的学术定义
 
-"胆味"（Tube Sound / Valve Sound）是电子管放大器特有的一种音色特征。根据学术文献，胆味的本质是：
+"胆味"（Tube Sound / Valve Sound）是电子管放大器特有的一种音色特征。根据学术文献#ref(1)，胆味的本质是：
 
 #block(inset: (left: 1.5em, y: 0.5em))[
   #set text(style: "italic", fill: luma(80))
@@ -135,7 +145,7 @@
 
 == 胆味的声学特征
 
-根据频谱分析研究，胆机的谐波失真具有以下特征：
+根据频谱分析研究#ref(2)，胆机的谐波失真具有以下特征：
 
 + *偶次谐波主导*：二次谐波（2nd harmonic）幅度最强，四次、六次谐波次之
 + *低次谐波为主*：各次谐波幅度随阶数递减
@@ -144,11 +154,11 @@
 
 == 胆味vs失真
 
-重要澄清："胆味就是失真"的说法是错误的。胆味的本质是谐波的*分布特征*（偶次为主、低次为主），而非失真的绝对大小。良好的胆机设计可以在保持可听谐波特征的同时，将总谐波失真控制在合理范围内。
+重要澄清："胆味就是失真"的说法是错误的。胆味的本质是谐波的*分布特征*（偶次为主、低次为主），而非失真的绝对大小。良好的胆机设计可以在保持可听谐波特征的同时，将总谐波失真控制在合理范围内#ref(3)。
 
 == 标准测试方法
 
-根据DAFX、TI、IEEE等学术论文，胆机测试包括以下方法：
+根据DAFX、TI、IEEE等学术论文#ref(3) #ref(4) #ref(5)，胆机测试包括以下方法：
 
 *谐波失真分析*：向放大器输入单一频率的正弦波，分析输出信号的频谱成分。胆机特征为2nd > 3rd > 4th > ...（偶次谐波占主导）。
 
@@ -156,13 +166,13 @@
 
 $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
 
-其中 $P_n$ 为第 $n$ 次谐波的功率，$P_1$ 为基波功率。胆机典型值：0.1% - 2%。
+其中 $P_n$ 为第 $n$ 次谐波的功率，$P_1$ 为基波功率。胆机典型值：0.1% - 2%#ref(3)。
 
-*互调失真（IMD）*：使用 19 kHz + 20 kHz 双音信号测试放大器的非线性特性。
+*互调失真（IMD）*：使用 19 kHz + 20 kHz 双音信号测试放大器的非线性特性#ref(3)。
 
-*频率响应*：20 Hz - 20 kHz 范围内的幅度和相位响应。胆机特点为高频轻微滚降，低频轻微衰减。
+*频率响应*：20 Hz - 20 kHz 范围内的幅度和相位响应。胆机特点为高频轻微滚降，低频轻微衰减#ref(3)。
 
-*瞬态响应*：使用方波或脉冲信号测试上升沿/下降沿时间和软削波特性。
+*瞬态响应*：使用方波或脉冲信号测试上升沿/下降沿时间和软削波特性#ref(3)。
 
 == 合格标准
 
@@ -326,8 +336,13 @@ $ "THD" = frac(sqrt(P_2^2 + P_3^2 + P_4^2 + dots.h), P_1) times 100% $
 
 = 参考文献
 
-+ Hamm, "Harmonic distortion characteristics of solid-state and vacuum-tube preamplifier stages under overload conditions"
-+ Texas Instruments, "如何测量运算放大器的总谐波失真和 THD+N 的基本原理", 2023
-+ Maleczek, "Comparative analysis of sound quality of vacuum-tube amplifiers and transistor amplifiers", Archives of Acoustics, 2012
-+ Quod Libet, "Simulation of Electron Tube Audio Circuits", ICMC 1996
-+ 漫步者社区, "什么是胆味", 2022
++ 漫步者社区. 什么是胆味[EB/OL]. 2022.
++ Maleczek M. Comparative analysis of sound quality of vacuum-tube amplifiers and transistor amplifiers[J]. Archives of Acoustics, 2012.
++ Hamm R. Harmonic distortion characteristics of solid-state and vacuum-tube preamplifier stages under overload conditions[J]. Journal of the Audio Engineering Society, 1999.
++ Texas Instruments. 如何测量运算放大器的总谐波失真和 THD+N 的基本原理[Z]. 2023.
++ Quod Libet. Simulation of Electron Tube Audio Circuits[C]. ICMC, 1996.
+
+#block(inset: (top: 2em))[
+  #set text(size: 10pt, fill: luma(100))
+  *声明*：本报告结果仅对被测样品（danji-cli 仿真输出）有效，不代表实际硬件胆机的性能。测试数据和分析方法详见正文。
+]
