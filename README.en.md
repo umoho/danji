@@ -41,6 +41,18 @@ Built-in physical models include triodes (Koren model), pentodes (Koren model + 
 
 5AR4 rectifier PSU → 2× 12AX7 common-cathode stages → RC tone control (~4.8kHz treble / ~72Hz bass).
 
+**Power Supply Module** (5AR4 + CRC π-filter):
+
+<p align="center">
+  <img src="images/psu.svg" alt="Power supply unit" width="300">
+</p>
+
+**Tone Control Module** (treble cut + bass cut):
+
+<p align="center">
+  <img src="images/tone.svg" alt="Tone control" width="300">
+</p>
+
 ---
 
 ## Crate Architecture

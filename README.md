@@ -41,6 +41,18 @@
 
 5AR4 整流电源 → 两级 12AX7 共阴放大 → RC 音调控制（高音 ~4.8kHz / 低音 ~72Hz）。
 
+**电源模块**（5AR4 + CRC π 型滤波）：
+
+<p align="center">
+  <img src="images/psu.svg" alt="Power supply unit" width="300">
+</p>
+
+**音调控制模块**（高音衰减 + 低音衰减）：
+
+<p align="center">
+  <img src="images/tone.svg" alt="Tone control" width="300">
+</p>
+
 ---
 
 ## Crate 架构
