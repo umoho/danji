@@ -364,13 +364,17 @@ pub fn run_engine(
                     }
                     return;
                 }
+                let gain = p.gain_linear();
                 let mut e = eng.lock().unwrap();
                 for frame in data.chunks(2) {
-                    let l_in = frame[0];
-                    let r_in = frame.get(1).copied().unwrap_or(l_in);
+                    let l_in = frame[0] * gain;
+                    let r_in = frame.get(1).copied().unwrap_or(frame[0]) * gain;
                     let (l_raw, r_raw) = e.process_frame(l_in, r_in);
-                    let l_out = (l_raw * vol).clamp(-1.0, 1.0);
-                    let r_out = (r_raw * vol).clamp(-1.0, 1.0);
+                    // output_atten: fixed scaling from plate voltage (~300Vpk)
+                    // to ±1.0 output range, simulating output transformer
+                    let output_atten = 1.0 / 300.0;
+                    let l_out = (l_raw * output_atten * vol).clamp(-1.0, 1.0);
+                    let r_out = (r_raw * output_atten * vol).clamp(-1.0, 1.0);
                     if tx.try_send(l_out).is_err() || tx.try_send(r_out).is_err() {
                         break;
                     }
