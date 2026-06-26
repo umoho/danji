@@ -9,7 +9,7 @@ use crate::tube::pentode;
 use crate::tube::triode;
 use log::{debug, error, warn};
 
-const MAX_ITER: usize = 50;
+const MAX_ITER: usize = 100;
 const TOL: f64 = 1e-6;
 const VSRC_G: f64 = 1e6;
 
