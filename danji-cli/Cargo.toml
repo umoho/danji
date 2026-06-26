@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 danji = { path = ".." }
-clap = { version = "4", features = ["derive"] }
-hound = "3"
+clap = { workspace = true }
+hound = { workspace = true }

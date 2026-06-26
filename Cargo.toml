@@ -1,6 +1,12 @@
 [workspace]
 members = ["danji-cli", "danji-realtime", "danji-ctrl"]
 
+[workspace.dependencies]
+log = "0.4"
+env_logger = "0.11"
+clap = { version = "4", features = ["derive"] }
+hound = "3"
+
 [package]
 name = "danji"
 version = "0.1.0"
@@ -12,31 +18,10 @@ keywords = ["audio", "dsp", "vacuum-tube", "amplifier", "simulation"]
 categories = ["multimedia::audio", "science::physics"]
 
 [dependencies]
-# GPU 计算
-wgpu = "22"
-pollster = "0.4"
-bytemuck = { version = "1", features = ["derive"] }
-
-# 错误处理
-thiserror = "2"
-
-# 日志
-log = "0.4"
-
-# 序列化 (配置文件支持)
-serde = { version = "1", features = ["derive"], optional = true }
-serde_json = { version = "1", optional = true }
+log = { workspace = true }
 
 [dev-dependencies]
-# 日志实现
-env_logger = "0.11"
-
-# 绘图 (测试验证)
-plotters = { version = "0.3", default-features = false, features = ["image"] }
-
-[features]
-default = ["serde-config"]
-serde-config = ["serde", "serde_json"]
+env_logger = { workspace = true }
 
 [profile.release]
 opt-level = 3
