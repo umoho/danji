@@ -25,11 +25,21 @@ Built-in physical models include triodes (Koren model), pentodes (Koren model + 
 
 ## Circuit Topology
 
-Single-stage common-cathode amplifier (12AX7):
+### single — Single Common-Cathode Stage
 
 <p align="center">
-  <img src="images/circuit.svg" alt="Common-cathode triode amplifier" width="400">
+  <img src="images/circuit.svg" alt="Single common-cathode stage" width="400">
 </p>
+
+### two-stage — Two-Stage RC-Coupled Cascade
+
+<p align="center">
+  <img src="images/two_stage.svg" alt="Two-stage cascaded amplifier" width="500">
+</p>
+
+### chain — Full Preamplifier Chain
+
+5AR4 rectifier PSU → 2× 12AX7 common-cathode stages → RC tone control (~4.8kHz treble / ~72Hz bass).
 
 ---
 

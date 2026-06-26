@@ -25,11 +25,21 @@
 
 ## 电路拓扑
 
-单级共阴放大级（12AX7）：
+### single — 单级共阴放大
 
 <p align="center">
-  <img src="images/circuit.svg" alt="Common-cathode triode amplifier" width="400">
+  <img src="images/circuit.svg" alt="Single common-cathode stage" width="400">
 </p>
+
+### two-stage — 两级 RC 耦合级联
+
+<p align="center">
+  <img src="images/two_stage.svg" alt="Two-stage cascaded amplifier" width="500">
+</p>
+
+### chain — 完整前级链路
+
+5AR4 整流电源 → 两级 12AX7 共阴放大 → RC 音调控制（高音 ~4.8kHz / 低音 ~72Hz）。
 
 ---
 
