@@ -111,9 +111,17 @@ fn bench_chain(sr: u32, duration_secs: f64) -> f64 {
 }
 
 fn main() {
-    println!("{:>10} {:>12} {:>14}", "sr(Hz)", "dur(s)", "single(xRT)");
+    println!(
+        "{:>10} {:>12} {:>14} {:>14} {:>14}",
+        "sr(Hz)", "dur(s)", "single(xRT)", "two-stage(xRT)", "chain(xRT)"
+    );
     for &sr in &[44100u32, 96000, 192000] {
-        let s = bench_single(sr, 1.0);
-        println!("{:>10} {:>12} {:>14.1}", sr, 1, s);
+        let s1 = bench_single(sr, 1.0);
+        let s2 = bench_two_stage(sr, 1.0);
+        let s3 = bench_chain(sr, 1.0);
+        println!(
+            "{:>10} {:>12} {:>14.1} {:>14.1} {:>14.1}",
+            sr, 1, s1, s2, s3
+        );
     }
 }

@@ -76,6 +76,7 @@ impl SimConfig {
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn add_coupled_inductor(
         &mut self,
         p_a: NodeId,
@@ -98,6 +99,7 @@ impl SimConfig {
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn add_coupled_inductor3(
         &mut self,
         p1: NodeId,
