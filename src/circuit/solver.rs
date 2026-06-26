@@ -10,7 +10,7 @@ use crate::tube::triode;
 use log::{debug, error, warn};
 
 const MAX_ITER: usize = 50;
-const TOL: f64 = 1e-9;
+const TOL: f64 = 1e-6;
 const VSRC_G: f64 = 1e6;
 
 pub struct CircuitSolver {
@@ -47,6 +47,9 @@ impl CircuitSolver {
         vin: f64,
     ) -> Result<(), DanjiError> {
         let n = self.num_nodes;
+
+        let mut max_delta = 0.0;
+        let mut worst_node = 0usize;
 
         for _iter in 0..MAX_ITER {
             self.g = [[0.0; MAX_NODES]; MAX_NODES];
@@ -405,11 +408,35 @@ impl CircuitSolver {
             let v_old = self.v;
             self.solve_linear()?;
 
-            let mut max_delta = 0.0;
-            for (vj, v_oldj) in self.v[..n].iter().zip(v_old[..n].iter()) {
+            // Line search: if any node's per-iteration change exceeds 10V,
+            // halve the step repeatedly. Prevents Newton overshoot when tube
+            // characteristic is highly nonlinear (e.g., large input signal
+            // pushing Vgk across cutoff). The 10V threshold is chosen for
+            // tube circuits where Vgk changes of 10V can move the tube from
+            // cutoff to full conduction.
+            for _ in 0..6 {
+                let mut max_delta = 0.0;
+                for (vj, voj) in self.v[..n].iter().zip(v_old[..n].iter()) {
+                    let d = (vj - voj).abs();
+                    if d > max_delta {
+                        max_delta = d;
+                    }
+                }
+                if max_delta < 10.0 {
+                    break;
+                }
+                for (j, &voj) in v_old[..n].iter().enumerate() {
+                    self.v[j] = voj + 0.5 * (self.v[j] - voj);
+                }
+            }
+
+            max_delta = 0.0;
+            worst_node = 0usize;
+            for (j, (vj, v_oldj)) in self.v[..n].iter().zip(v_old[..n].iter()).enumerate() {
                 let d = (vj - v_oldj).abs();
                 if d > max_delta {
                     max_delta = d;
+                    worst_node = j;
                 }
             }
             if max_delta < TOL {
@@ -432,7 +459,10 @@ impl CircuitSolver {
             }
         }
 
-        warn!("solver diverged after {} iterations", MAX_ITER);
+        warn!(
+            "solver diverged after {} iterations (worst node={} delta={:.2e})",
+            MAX_ITER, worst_node, max_delta
+        );
         Err(DanjiError::Diverged {
             sample: 0,
             iterations: MAX_ITER,
