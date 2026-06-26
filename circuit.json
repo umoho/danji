@@ -1,0 +1,97 @@
+{
+  "modules": {
+    "common_cathode": {
+      "ports": {
+        "input": {
+          "direction": "input",
+          "bits": [2]
+        },
+        "output": {
+          "direction": "output",
+          "bits": [3]
+        }
+      },
+      "cells": {
+        "V1": {
+          "type": "triode",
+          "port_directions": {
+            "P": "output",
+            "G": "input",
+            "K": "input"
+          },
+          "connections": {
+            "P": [3],
+            "G": [2],
+            "K": [5]
+          },
+          "attributes": {
+            "ref": "V1",
+            "value": "12AX7"
+          }
+        },
+        "R_plate": {
+          "type": "r_v",
+          "connections": {
+            "A": [6],
+            "B": [3]
+          },
+          "attributes": {
+            "ref": "R_plate",
+            "value": "100kΩ"
+          }
+        },
+        "R_grid": {
+          "type": "r_v",
+          "connections": {
+            "A": [2],
+            "B": [4]
+          },
+          "attributes": {
+            "ref": "R_grid",
+            "value": "1MΩ"
+          }
+        },
+        "R_cath": {
+          "type": "r_v",
+          "connections": {
+            "A": [5],
+            "B": [4]
+          },
+          "attributes": {
+            "ref": "R_cath",
+            "value": "1.5kΩ"
+          }
+        },
+        "C_cath": {
+          "type": "c_v",
+          "connections": {
+            "A": [5],
+            "B": [4]
+          },
+          "attributes": {
+            "ref": "C_cath",
+            "value": "22µF"
+          }
+        },
+        "VBB": {
+          "type": "vcc",
+          "connections": {
+            "A": [6]
+          },
+          "attributes": {
+            "name": "+V_B+"
+          }
+        },
+        "GND": {
+          "type": "gnd",
+          "connections": {
+            "A": [4]
+          },
+          "attributes": {
+            "name": "GND"
+          }
+        }
+      }
+    }
+  }
+}
