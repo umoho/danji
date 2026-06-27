@@ -1,3 +1,28 @@
+//! 五极管模型模块。
+//!
+//! 实现基于改进 Koren 模型的五极管屏极电流、帘栅极电流计算和数值导数。
+//!
+//! # 主要函数
+//!
+//! - [`plate_current`] - 计算屏极电流
+//! - [`screen_current`] - 计算帘栅极电流
+//! - [`dip_dvp`] - 屏极电流对屏极电压的偏导数
+//! - [`dip_dvg1`] - 屏极电流对控制栅极电压的偏导数（跨导）
+//!
+//! ---
+//!
+//! Pentode model module.
+//!
+//! Implements pentode plate current, screen grid current calculation
+//! and numerical derivatives based on modified Koren model.
+//!
+//! # Main Functions
+//!
+//! - [`plate_current`] - Calculate plate current
+//! - [`screen_current`] - Calculate screen grid current
+//! - [`dip_dvp`] - Plate current partial derivative w.r.t. plate voltage
+//! - [`dip_dvg1`] - Plate current partial derivative w.r.t. control grid voltage (transconductance)
+
 use crate::tube::params::PentodeParams;
 
 /// 计算五极管屏极电流。

@@ -1,3 +1,24 @@
+//! 真空管参数模块。
+//!
+//! 定义三极管和五极管的物理参数，包含多种预设管型。
+//!
+//! # 主要类型
+//!
+//! - [`TriodeParams`] - 三极管参数
+//! - [`PentodeParams`] - 五极管参数
+//!
+//! ---
+//!
+//! Vacuum tube parameters module.
+//!
+//! Defines physical parameters for triode and pentode tubes,
+//! with multiple preset tube types.
+//!
+//! # Main Types
+//!
+//! - [`TriodeParams`] - Triode parameters
+//! - [`PentodeParams`] - Pentode parameters
+
 /// 三极管参数（Koren 模型）。
 ///
 /// 包含三极管仿真的所有物理参数，基于 Koren 模型。

@@ -1,3 +1,38 @@
+//! 电路元件模块。
+//!
+//! 定义电阻、电容、电感、耦合电感和真空管实例等电路元件。
+//!
+//! # 主要类型
+//!
+//! - [`Resistor`] - 电阻
+//! - [`Capacitor`] - 电容
+//! - [`Inductor`] - 电感
+//! - [`CoupledInductor`] - 双绕组耦合电感
+//! - [`CoupledInductor3`] - 三绕组耦合电感
+//! - [`TriodeInstance`] - 三极管实例
+//! - [`PentodeInstance`] - 五极管实例
+//! - [`DiodeInstance`] - 二极管实例
+//! - [`CircuitDef`] - 电路定义
+//!
+//! ---
+//!
+//! Circuit element module.
+//!
+//! Defines resistor, capacitor, inductor, coupled inductor, and vacuum tube
+//! instance circuit elements.
+//!
+//! # Main Types
+//!
+//! - [`Resistor`] - Resistor
+//! - [`Capacitor`] - Capacitor
+//! - [`Inductor`] - Inductor
+//! - [`CoupledInductor`] - Dual-winding coupled inductor
+//! - [`CoupledInductor3`] - Three-winding coupled inductor
+//! - [`TriodeInstance`] - Triode instance
+//! - [`PentodeInstance`] - Pentode instance
+//! - [`DiodeInstance`] - Diode instance
+//! - [`CircuitDef`] - Circuit definition
+
 use crate::circuit::node::NodeId;
 
 /// 电阻元件。

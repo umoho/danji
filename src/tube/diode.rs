@@ -1,3 +1,31 @@
+//! 二极管模型模块。
+//!
+//! 实现基于 Child-Langmuir 定律的二极管电流计算。
+//!
+//! # 主要类型
+//!
+//! - [`DiodeParams`] - 二极管参数
+//!
+//! # 主要函数
+//!
+//! - [`diode_current`] - 计算二极管电流
+//! - [`diode_conductance`] - 计算二极管电导
+//!
+//! ---
+//!
+//! Diode model module.
+//!
+//! Implements diode current calculation based on Child-Langmuir law.
+//!
+//! # Main Types
+//!
+//! - [`DiodeParams`] - Diode parameters
+//!
+//! # Main Functions
+//!
+//! - [`diode_current`] - Calculate diode current
+//! - [`diode_conductance`] - Calculate diode conductance
+
 /// 二极管参数（Child-Langmuir 模型）。
 ///
 /// 包含二极管仿真的所有物理参数。

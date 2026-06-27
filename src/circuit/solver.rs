@@ -1,3 +1,21 @@
+//! MNA 求解器模块。
+//!
+//! 实现基于 Newton-Raphson 迭代的非线性电路求解。
+//!
+//! # 主要类型
+//!
+//! - [`CircuitSolver`] - MNA 求解器
+//!
+//! ---
+//!
+//! MNA solver module.
+//!
+//! Implements nonlinear circuit solving based on Newton-Raphson iteration.
+//!
+//! # Main Types
+//!
+//! - [`CircuitSolver`] - MNA solver
+
 use crate::circuit::element::{CircuitDef, MAX_NODES};
 use crate::circuit::node::NodeId;
 use crate::error::DanjiError;

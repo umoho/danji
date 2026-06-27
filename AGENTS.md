@@ -42,12 +42,107 @@ devlog/YYYY-MM-DD-slug.md
 
 所有代码的文档注释必须遵循以下格式规范。
 
-### 基本结构
+### 决策规则
 
-使用段落对照方式（中文在前，英文在后），以 `---` 分隔：
+| 项目 | 决策 |
+|------|------|
+| 语言 | 中文（技术术语保留英文） |
+| 格式 | 段落对照（中文在前，英文在后，`---` 分隔） |
+| 说明内容 | 含物理单位和取值范围（参数、字段等） |
+| Panic | `# Panics`（复数形式），明确写出条件 |
+| 内联注释 | 保持英文，不翻译 |
+| 私有项 | 全部添加双语注释 |
+| 测试函数 | 不添加文档注释 |
+| 代码示例 | 注释保持英文 |
+
+### Mod（模块）
+
+使用 `//!` 内部文档注释，段落对照：
 
 ```rust
-/// 中文简短描述
+//! 中文模块描述。
+//!
+//! 中文详细描述（可选）
+//!
+//! # 子模块
+//!
+//! - [`mod1`] - 模块1说明
+//!
+//! # 主要类型
+//!
+//! - [`Type1`] - 类型1说明
+//!
+//! ---
+//!
+//! English module description.
+//!
+//! English detailed description (optional)
+//!
+//! # Submodules
+//!
+//! - [`mod1`] - Module 1 description
+//!
+//! # Main Types
+//!
+//! - [`Type1`] - Type 1 description
+```
+
+### Struct
+
+使用 `///` 外部文档注释，字段注释为双语：
+
+```rust
+/// 中文结构体描述。
+///
+/// 中文详细描述（可选）
+///
+/// ---
+///
+/// English struct description.
+///
+/// English detailed description (optional)
+pub struct Example {
+    /// 中文字段说明
+    ///
+    /// English field description
+    pub field: Type,
+}
+```
+
+### Enum
+
+使用 `///` 外部文档注释，变体注释为双语：
+
+```rust
+/// 中文枚举描述。
+///
+/// ---
+///
+/// English enum description.
+pub enum Example {
+    /// 变体1说明
+    ///
+    /// Variant 1 description
+    Variant1,
+
+    /// 变体2说明
+    ///
+    /// Variant 2 description
+    Variant2 {
+        /// 字段说明
+        ///
+        /// Field description
+        field: Type,
+    },
+}
+```
+
+### Fn（函数/方法）
+
+使用 `///` 外部文档注释，段落对照：
+
+```rust
+/// 中文简短描述。
 ///
 /// 中文详细描述（可选）
 ///
@@ -63,15 +158,9 @@ devlog/YYYY-MM-DD-slug.md
 ///
 /// 可能 panic 的条件说明
 ///
-/// # 示例
-///
-/// ```
-/// // 注释保持英文
-/// ```
-///
 /// ---
 ///
-/// English brief description
+/// English brief description.
 ///
 /// English detailed description (optional)
 ///
@@ -86,72 +175,20 @@ devlog/YYYY-MM-DD-slug.md
 /// # Panics
 ///
 /// Conditions that may cause panic
-///
-/// # Examples
-///
-/// ```
-/// // Comments stay in English
-/// ```
+pub fn example(param1: Type) -> ReturnType {
+    // ...
+}
 ```
 
-### 章节标题
+### Const（常量）
 
-使用 Rust 标准章节（复数形式）：
-
-| 章节 | 用途 |
-|------|------|
-| `# 参数` | 参数说明（含物理单位和取值范围） |
-| `# 返回值` | 返回值说明 |
-| `# Panics` | 可能 panic 的条件（复数形式） |
-| `# 示例` | 代码示例 |
-
-### 决策规则
-
-| 项目 | 决策 |
-|------|------|
-| 语言 | 中文（技术术语保留英文） |
-| 格式 | 段落对照（中文在前，英文在后，`---` 分隔） |
-| 参数说明 | 含物理单位和取值范围 |
-| Panic | `# Panics`（复数形式），明确写出条件 |
-| 内联注释 | 保持英文，不翻译 |
-| 私有函数 | 全部添加双语注释 |
-| 测试函数 | 不添加文档注释 |
-| 示例代码 | 注释保持英文 |
-
-### 示例
+使用 `///` 外部文档注释，简短描述：
 
 ```rust
-/// 添加电阻元件。
-///
-/// 在节点 `a` 和 `b` 之间添加一个电阻值为 `ohms` 的电阻。
-///
-/// # 参数
-///
-/// * `a` - 节点 A
-/// * `b` - 节点 B
-/// * `ohms` - 电阻值（单位：欧姆，范围：0.0 ~ 1e9）
-///
-/// # 返回值
-///
-/// 返回自身引用，支持链式调用
+/// 中文说明。
 ///
 /// ---
 ///
-/// Add a resistor element.
-///
-/// Adds a resistor with value `ohms` between nodes `a` and `b`.
-///
-/// # Arguments
-///
-/// * `a` - Node A
-/// * `b` - Node B
-/// * `ohms` - Resistance (unit: ohms, range: 0.0 ~ 1e9)
-///
-/// # Returns
-///
-/// Returns self reference for method chaining
-pub fn add_resistor(&mut self, a: NodeId, b: NodeId, ohms: f64) -> &mut Self {
-    self.resistors.push(Resistor::new(a, b, ohms));
-    self
-}
+/// English description.
+const NAME: Type = value;
 ```

@@ -1,3 +1,26 @@
+//! 三极管模型模块。
+//!
+//! 实现基于 Koren 模型的三极管屏极电流计算和数值导数。
+//!
+//! # 主要函数
+//!
+//! - [`plate_current`] - 计算屏极电流
+//! - [`dip_dvp`] - 屏极电流对屏极电压的偏导数
+//! - [`dip_dvg`] - 屏极电流对栅极电压的偏导数（跨导）
+//!
+//! ---
+//!
+//! Triode model module.
+//!
+//! Implements triode plate current calculation and numerical derivatives
+//! based on the Koren model.
+//!
+//! # Main Functions
+//!
+//! - [`plate_current`] - Calculate plate current
+//! - [`dip_dvp`] - Plate current partial derivative w.r.t. plate voltage
+//! - [`dip_dvg`] - Plate current partial derivative w.r.t. grid voltage (transconductance)
+
 use crate::tube::params::TriodeParams;
 
 /// 计算三极管屏极电流。
@@ -125,7 +148,6 @@ pub fn dip_dvg(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tube::params::TriodeParams;
 
     #[test]
     fn test_12ax7_cutoff() {
