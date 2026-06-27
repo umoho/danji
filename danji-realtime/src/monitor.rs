@@ -29,7 +29,19 @@ pub fn run_device_monitor(
 
     /// 获取所有音频设备 ID 列表。
     ///
+    /// # Safety
+    ///
+    /// 调用 CoreAudio FFI，传入的指针均有效：`address` 指向栈上结构体，
+    /// `data_size` 是有效 `u32` 引用，`devices` 缓冲区大小由 `data_size` 正确计算。
+    ///
+    /// ---
+    ///
     /// Get all audio device IDs from the system.
+    ///
+    /// # Safety
+    ///
+    /// Calls CoreAudio FFI with valid pointers: `address` points to a stack struct,
+    /// `data_size` is a valid `u32` reference, and `devices` buffer is sized by `data_size`.
     unsafe fn get_all_device_ids() -> Vec<AudioObjectID> {
         let address = AudioObjectPropertyAddress {
             mSelector: kAudioHardwarePropertyDevices,
@@ -58,6 +70,7 @@ pub fn run_device_monitor(
     }
 
     // 获取初始设备集合
+    // SAFETY: get_all_device_ids uses valid pointers for CoreAudio FFI
     let initial_devices: HashSet<AudioObjectID> =
         unsafe { get_all_device_ids() }.into_iter().collect();
 
@@ -71,6 +84,7 @@ pub fn run_device_monitor(
     loop {
         thread::sleep(Duration::from_millis(200));
 
+        // SAFETY: get_all_device_ids uses valid pointers for CoreAudio FFI
         let current_devices: HashSet<AudioObjectID> =
             unsafe { get_all_device_ids() }.into_iter().collect();
 
