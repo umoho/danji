@@ -187,9 +187,9 @@ fn monitor_default_output(host: cpal::Host, cmd_tx: mpsc::Sender<MainCommand>) {
         })
     }
 
-    // 四个字符码
-    const ISPK: u32 = u32::from_be_bytes(*b"ispk"); // 内置扬声器
-    const HDPN: u32 = u32::from_be_bytes(*b"hdpn"); // 耳机
+    // 四个字符码（native-endian，匹配 CoreAudio 返回值）
+    const ISPK: u32 = u32::from_ne_bytes(*b"ispk"); // 内置扬声器
+    const HDPN: u32 = u32::from_ne_bytes(*b"hdpn"); // 耳机
 
     // 通过 CoreAudio transport type 找到内置设备的 ID（硬件 ID 不会变）
     let builtin_coreaudio_id = unsafe {
