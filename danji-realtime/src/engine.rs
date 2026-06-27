@@ -178,19 +178,33 @@ pub fn blackhole_device(host: &cpal::Host) -> Result<cpal::Device, String> {
 }
 
 pub fn output_device(host: &cpal::Host) -> Result<cpal::Device, String> {
-    find_device(host, |d| {
-        d.description()
-            .map(|desc| {
-                !desc.name().contains("BlackHole")
-                    && !desc.name().contains("多输出")
-                    && !desc.name().contains("Aggregate")
+    // 优先使用系统默认输出设备，保留排除虚拟设备的过滤
+    host.default_output_device()
+        .filter(|d| {
+            d.description()
+                .map(|desc| {
+                    !desc.name().contains("BlackHole")
+                        && !desc.name().contains("多输出")
+                        && !desc.name().contains("Aggregate")
+                })
+                .unwrap_or(false)
+        })
+        .or_else(|| {
+            // 回退：遍历所有设备查找
+            find_device(host, |d| {
+                d.description()
+                    .map(|desc| {
+                        !desc.name().contains("BlackHole")
+                            && !desc.name().contains("多输出")
+                            && !desc.name().contains("Aggregate")
+                    })
+                    .unwrap_or(false)
+                    && d.supported_output_configs()
+                        .ok()
+                        .is_some_and(|mut c| c.next().is_some())
             })
-            .unwrap_or(false)
-            && d.supported_output_configs()
-                .ok()
-                .is_some_and(|mut c| c.next().is_some())
-    })
-    .ok_or_else(|| "No physical output device found".into())
+        })
+        .ok_or_else(|| "No physical output device found".into())
 }
 
 // ── Tube params ──
@@ -360,6 +374,7 @@ pub fn run_engine(
     loop {
         let engine = Arc::new(Mutex::new(build_engine(sr, &params)?));
         let (tx, rx) = mpsc::sync_channel::<f32>(65536);
+        let rx = Arc::new(Mutex::new(rx));
 
         let p = params.clone();
         let eng = engine.clone();
@@ -395,16 +410,20 @@ pub fn run_engine(
             None,
         )?;
 
-        let output_stream = output.build_output_stream(
-            output_cfg,
-            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                for sample in data.iter_mut() {
-                    *sample = rx.try_recv().unwrap_or(0.0);
-                }
-            },
-            move |err| log::error!("output error: {err}"),
-            None,
-        )?;
+        let mut output_stream = {
+            let rx = rx.clone();
+            output.build_output_stream(
+                output_cfg,
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    let rx = rx.lock().unwrap();
+                    for sample in data.iter_mut() {
+                        *sample = rx.try_recv().unwrap_or(0.0);
+                    }
+                },
+                move |err| log::error!("output error: {err}"),
+                None,
+            )?
+        };
 
         input_stream.play()?;
         output_stream.play()?;
@@ -439,6 +458,30 @@ pub fn run_engine(
                     };
                     let _ = resp.send(msg);
                     break;
+                }
+                Ok(MainCommand::SwitchOutput { device }) => {
+                    drop(output_stream);
+                    let rx_clone = rx.clone();
+                    output_stream = device.build_output_stream(
+                        output_cfg,
+                        move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                            let rx = rx_clone.lock().unwrap();
+                            for sample in data.iter_mut() {
+                                *sample = rx.try_recv().unwrap_or(0.0);
+                            }
+                        },
+                        move |err| log::error!("output error: {err}"),
+                        None,
+                    )?;
+                    output_stream.play()?;
+                    log::info!(
+                        "Output switched to: {}",
+                        device
+                            .description()
+                            .map(|d| d.name().to_string())
+                            .unwrap_or_default()
+                    );
+                    // 不 break，继续内层循环
                 }
                 Ok(MainCommand::Stop) => {
                     drop(input_stream);

@@ -15,7 +15,7 @@ mod params;
 mod socket;
 
 use clap::Parser;
-use cpal::traits::{DeviceTrait, StreamTrait};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::StreamConfig;
 use hound::{WavSpec, WavWriter};
 use std::sync::mpsc;
@@ -24,7 +24,7 @@ use std::thread;
 use std::time::Duration;
 
 use engine::{blackhole_device, output_device, run_engine};
-use params::SharedParams;
+use params::{MainCommand, SharedParams};
 
 #[derive(Parser)]
 #[command(name = "danji-realtime", about = "Real-time tube amplifier daemon")]
@@ -79,6 +79,73 @@ fn capture_to_file(path: &str, duration_secs: f64) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
+/// 监听系统默认输出设备变化，检测到切换时通知 engine 重建输出流。
+///
+/// Polls the CoreAudio system default output device every 200 ms. When a change
+/// is detected, sends a `SwitchOutput` command to the engine.
+#[cfg(target_os = "macos")]
+fn monitor_default_output(host: cpal::Host, cmd_tx: mpsc::Sender<MainCommand>) {
+    use coreaudio_sys::{
+        kAudioHardwarePropertyDefaultOutputDevice, kAudioObjectPropertyScopeGlobal,
+        kAudioObjectSystemObject, AudioObjectGetPropertyData, AudioObjectID,
+        AudioObjectPropertyAddress,
+    };
+    use std::mem;
+
+    /// 从 CoreAudio 获取当前系统默认输出设备 ID。
+    ///
+    /// Get the current system default output device ID from CoreAudio.
+    /// Returns 0 on failure.
+    unsafe fn get_default_output_id() -> AudioObjectID {
+        let address = AudioObjectPropertyAddress {
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: 0,
+        };
+        let mut device_id: AudioObjectID = 0;
+        let mut data_size = mem::size_of::<AudioObjectID>() as u32;
+        let status = AudioObjectGetPropertyData(
+            kAudioObjectSystemObject,
+            &address,
+            0,
+            std::ptr::null(),
+            &mut data_size,
+            &mut device_id as *mut _ as *mut std::ffi::c_void,
+        );
+        if status == 0 {
+            device_id
+        } else {
+            0
+        }
+    }
+
+    let mut last_id = unsafe { get_default_output_id() };
+    log::info!("Output device monitor started (polling)");
+
+    loop {
+        thread::sleep(Duration::from_millis(200));
+
+        let current_id = unsafe { get_default_output_id() };
+        if current_id != 0 && current_id != last_id {
+            last_id = current_id;
+            if let Some(new_device) = host.default_output_device() {
+                let name = new_device
+                    .description()
+                    .map(|d| d.name().to_string())
+                    .unwrap_or_default();
+                log::info!("System default output changed to: {name}");
+                let _ = cmd_tx.send(MainCommand::SwitchOutput { device: new_device });
+            }
+        }
+    }
+}
+
+/// 非 macOS 平台的空实现。
+///
+/// No-op implementation for non-macOS platforms.
+#[cfg(not(target_os = "macos"))]
+fn monitor_default_output(_host: cpal::Host, _cmd_tx: mpsc::Sender<MainCommand>) {}
+
 fn run_daemon() -> Result<(), Box<dyn std::error::Error>> {
     let host = cpal::default_host();
     let blackhole = blackhole_device(&host)?;
@@ -110,9 +177,17 @@ fn run_daemon() -> Result<(), Box<dyn std::error::Error>> {
     let params = SharedParams::new();
     let (cmd_tx, cmd_rx) = mpsc::channel();
 
+    // 先克隆，再分别移入两个线程
+    let cmd_tx_socket = cmd_tx.clone();
     let sp = params.clone();
     thread::spawn(move || {
-        socket::run_socket_server(sp, cmd_tx);
+        socket::run_socket_server(sp, cmd_tx_socket);
+    });
+
+    // 启动输出设备监听线程
+    let host_for_monitor = cpal::default_host();
+    thread::spawn(move || {
+        monitor_default_output(host_for_monitor, cmd_tx);
     });
 
     run_engine(&blackhole, &output, &input_cfg, &output_cfg, params, cmd_rx)?;

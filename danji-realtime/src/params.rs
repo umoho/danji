@@ -96,5 +96,11 @@ pub enum MainCommand {
         tube: String,
         resp: std::sync::mpsc::Sender<String>,
     },
+    /// 切换输出设备（由设备监听线程触发，fire-and-forget）。
+    ///
+    /// Switch the output device (triggered by the device monitor thread, fire-and-forget).
+    SwitchOutput {
+        device: cpal::Device,
+    },
     Stop,
 }
