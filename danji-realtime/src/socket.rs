@@ -1,3 +1,15 @@
+//! Unix socket 控制接口模块。
+//!
+//! 提供通过 Unix socket 控制仿真器参数的命令接口。
+//! 详见 `PROTOCOL.md` 了解完整的协议规范。
+//!
+//! ---
+//!
+//! Unix socket control interface module.
+//!
+//! Provides command interface for controlling simulator parameters via Unix socket.
+//! See `PROTOCOL.md` for complete protocol specification.
+
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::mpsc;

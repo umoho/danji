@@ -1,13 +1,67 @@
+/// 三极管参数（Koren 模型）。
+///
+/// 包含三极管仿真的所有物理参数，基于 Koren 模型。
+/// 使用 [`TriodeParams::new_12ax7`] 等工厂方法获取预设参数。
+///
+/// # 字段说明 / Fields
+///
+/// * `mu` - 放大系数 (μ)
+/// * `ex` - 幂律指数
+/// * `kg1` - 电流系数
+/// * `kp` - 阴极耦合系数
+/// * `kvb` - 电压反馈系数
+///
+/// ---
+///
+/// Triode parameters (Koren model).
+///
+/// Contains all physical parameters for triode simulation,
+/// based on the Koren model. Use factory methods like
+/// [`TriodeParams::new_12ax7`] for preset parameters.
+///
+/// # Fields
+///
+/// * `mu` - Amplification factor (μ)
+/// * `ex` - Power law exponent
+/// * `kg1` - Current coefficient
+/// * `kp` - Cathode coupling coefficient
+/// * `kvb` - Voltage feedback coefficient
 #[derive(Debug, Clone)]
 pub struct TriodeParams {
+    /// 放大系数 (μ)
     pub mu: f64,
+    /// 幂律指数
     pub ex: f64,
+    /// 电流系数
     pub kg1: f64,
+    /// 阴极耦合系数
     pub kp: f64,
+    /// 电压反馈系数
     pub kvb: f64,
 }
 
 impl TriodeParams {
+    /// 创建三极管参数。
+    ///
+    /// # 参数 / Arguments
+    ///
+    /// * `mu` - 放大系数 (μ)
+    /// * `ex` - 幂律指数
+    /// * `kg1` - 电流系数
+    /// * `kp` - 阴极耦合系数
+    /// * `kvb` - 电压反馈系数
+    ///
+    /// ---
+    ///
+    /// Create triode parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `mu` - Amplification factor (μ)
+    /// * `ex` - Power law exponent
+    /// * `kg1` - Current coefficient
+    /// * `kp` - Cathode coupling coefficient
+    /// * `kvb` - Voltage feedback coefficient
     pub const fn new(mu: f64, ex: f64, kg1: f64, kp: f64, kvb: f64) -> Self {
         Self {
             mu,
@@ -59,17 +113,76 @@ impl TriodeParams {
     }
 }
 
+/// 五极管参数（Koren 模型）。
+///
+/// 包含五极管仿真的所有物理参数，基于 Koren 模型。
+/// 使用 [`PentodeParams::new_el84`] 等工厂方法获取预设参数。
+///
+/// # 字段说明 / Fields
+///
+/// * `mu` - 放大系数 (μ)
+/// * `ex` - 幂律指数
+/// * `kg1` - 屏极电流系数
+/// * `kg2` - 帘栅极电流系数
+/// * `kp` - 阴极耦合系数
+/// * `kvb` - 电压反馈系数
+///
+/// ---
+///
+/// Pentode parameters (Koren model).
+///
+/// Contains all physical parameters for pentode simulation,
+/// based on the Koren model. Use factory methods like
+/// [`PentodeParams::new_el84`] for preset parameters.
+///
+/// # Fields
+///
+/// * `mu` - Amplification factor (μ)
+/// * `ex` - Power law exponent
+/// * `kg1` - Plate current coefficient
+/// * `kg2` - Screen grid current coefficient
+/// * `kp` - Cathode coupling coefficient
+/// * `kvb` - Voltage feedback coefficient
 #[derive(Debug, Clone)]
 pub struct PentodeParams {
+    /// 放大系数 (μ)
     pub mu: f64,
+    /// 幂律指数
     pub ex: f64,
+    /// 屏极电流系数
     pub kg1: f64,
+    /// 帘栅极电流系数
     pub kg2: f64,
+    /// 阴极耦合系数
     pub kp: f64,
+    /// 电压反馈系数
     pub kvb: f64,
 }
 
 impl PentodeParams {
+    /// 创建五极管参数。
+    ///
+    /// # 参数 / Arguments
+    ///
+    /// * `mu` - 放大系数 (μ)
+    /// * `ex` - 幂律指数
+    /// * `kg1` - 屏极电流系数
+    /// * `kg2` - 帘栅极电流系数
+    /// * `kp` - 阴极耦合系数
+    /// * `kvb` - 电压反馈系数
+    ///
+    /// ---
+    ///
+    /// Create pentode parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `mu` - Amplification factor (μ)
+    /// * `ex` - Power law exponent
+    /// * `kg1` - Plate current coefficient
+    /// * `kg2` - Screen grid current coefficient
+    /// * `kp` - Cathode coupling coefficient
+    /// * `kvb` - Voltage feedback coefficient
     pub const fn new(mu: f64, ex: f64, kg1: f64, kg2: f64, kp: f64, kvb: f64) -> Self {
         Self {
             mu,

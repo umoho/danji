@@ -1,3 +1,15 @@
+//! 共享参数模块。
+//!
+//! 提供音频线程和控制线程之间共享的仿真器参数，
+//! 使用原子操作和读写锁实现线程安全。
+//!
+//! ---
+//!
+//! Shared parameters module.
+//!
+//! Provides simulator parameters shared between audio and control threads,
+//! using atomic operations and read-write locks for thread safety.
+
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, RwLock};
 

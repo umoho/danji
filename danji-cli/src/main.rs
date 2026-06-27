@@ -1,3 +1,14 @@
+//! danji-cli - 真空管放大器离线音频处理器。
+//!
+//! 本程序读取 WAV 文件，通过真空管放大器仿真处理后输出 WAV 文件。
+//!
+//! ---
+//!
+//! danji-cli - Vacuum tube amplifier offline audio processor.
+//!
+//! This program reads WAV files, processes them through vacuum tube amplifier
+//! simulation, and outputs WAV files.
+
 use clap::Parser;
 use danji::{single_triode_config, DiodeParams, NodeId, SimConfig, Simulator, TriodeParams};
 use hound::{WavReader, WavSpec, WavWriter};

@@ -1,3 +1,13 @@
+//! 守护进程通信模块。
+//!
+//! 提供与 danji-realtime 守护进程的 Unix socket 通信功能。
+//!
+//! ---
+//!
+//! Daemon communication module.
+//!
+//! Provides Unix socket communication with danji-realtime daemon.
+
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::sync::mpsc;

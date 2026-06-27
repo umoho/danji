@@ -1,5 +1,35 @@
 use crate::tube::params::TriodeParams;
 
+/// 计算三极管屏极电流。
+///
+/// 基于 Koren 模型计算三极管在给定屏极电压和栅极电压下的屏极电流。
+///
+/// # 参数 / Arguments
+///
+/// * `vp` - 屏极电压（单位：V，范围：0 ~ 500）
+/// * `vg` - 栅极电压（单位：V，范围：-50 ~ 0）
+/// * `params` - 三极管参数
+///
+/// # 返回值 / Returns
+///
+/// 返回屏极电流（单位：A，范围：0 ~ 0.1）
+///
+/// ---
+///
+/// Calculate triode plate current.
+///
+/// Calculates triode plate current based on Koren model for given
+/// plate voltage and grid voltage.
+///
+/// # Arguments
+///
+/// * `vp` - Plate voltage (unit: V, range: 0 ~ 500)
+/// * `vg` - Grid voltage (unit: V, range: -50 ~ 0)
+/// * `params` - Triode parameters
+///
+/// # Returns
+///
+/// Returns plate current (unit: A, range: 0 ~ 0.1)
 pub fn plate_current(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
     let vp_sq = vp.abs();
     let inner = 1.0 / params.mu + vg / (params.kvb + vp_sq * vp_sq).sqrt();
@@ -19,6 +49,35 @@ pub fn plate_current(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
     (e1_pow + e1 * e1_pow_m1) / params.kg1
 }
 
+/// 计算三极管屏极电流对屏极电压的偏导数 (∂Ip/∂Vp)。
+///
+/// 使用数值差分法计算。
+///
+/// # 参数 / Arguments
+///
+/// * `vp` - 屏极电压（单位：V，范围：0 ~ 500）
+/// * `vg` - 栅极电压（单位：V，范围：-50 ~ 0）
+/// * `params` - 三极管参数
+///
+/// # 返回值 / Returns
+///
+/// 返回 ∂Ip/∂Vp（单位：S，西门子）
+///
+/// ---
+///
+/// Calculate triode plate current partial derivative with respect to plate voltage (∂Ip/∂Vp).
+///
+/// Uses numerical differentiation.
+///
+/// # Arguments
+///
+/// * `vp` - Plate voltage (unit: V, range: 0 ~ 500)
+/// * `vg` - Grid voltage (unit: V, range: -50 ~ 0)
+/// * `params` - Triode parameters
+///
+/// # Returns
+///
+/// Returns ∂Ip/∂Vp (unit: S, Siemens)
 pub fn dip_dvp(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
     let eps = (1e-6_f64).max(vp.abs() * 1e-4);
     let ip0 = plate_current(vp - eps, vg, params);
@@ -26,6 +85,36 @@ pub fn dip_dvp(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
     (ip1 - ip0) / (2.0 * eps)
 }
 
+/// 计算三极管屏极电流对栅极电压的偏导数 (∂Ip/∂Vg)，即跨导 (gm)。
+///
+/// 使用数值差分法计算。
+///
+/// # 参数 / Arguments
+///
+/// * `vp` - 屏极电压（单位：V，范围：0 ~ 500）
+/// * `vg` - 栅极电压（单位：V，范围：-50 ~ 0）
+/// * `params` - 三极管参数
+///
+/// # 返回值 / Returns
+///
+/// 返回 ∂Ip/∂Vg（单位：S，西门子）
+///
+/// ---
+///
+/// Calculate triode plate current partial derivative with respect to grid voltage (∂Ip/∂Vg),
+/// also known as transconductance (gm).
+///
+/// Uses numerical differentiation.
+///
+/// # Arguments
+///
+/// * `vp` - Plate voltage (unit: V, range: 0 ~ 500)
+/// * `vg` - Grid voltage (unit: V, range: -50 ~ 0)
+/// * `params` - Triode parameters
+///
+/// # Returns
+///
+/// Returns ∂Ip/∂Vg (unit: S, Siemens)
 pub fn dip_dvg(vp: f64, vg: f64, params: &TriodeParams) -> f64 {
     let eps = (1e-6_f64).max(vg.abs() * 1e-4);
     let ip0 = plate_current(vp, vg - eps, params);

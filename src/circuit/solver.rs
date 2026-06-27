@@ -9,19 +9,61 @@ use crate::tube::pentode;
 use crate::tube::triode;
 use log::{debug, error, warn};
 
+/// 最大迭代次数。
 const MAX_ITER: usize = 100;
+
+/// 收敛容差。
 const TOL: f64 = 1e-6;
+
+/// 电压源内电导。
 const VSRC_G: f64 = 1e6;
 
+/// MNA（改进节点分析）求解器。
+///
+/// 实现基于 Newton-Raphson 迭代的非线性电路求解，
+/// 支持电阻、电容、电感、耦合电感和真空管器件。
+///
+/// ---
+///
+/// MNA (Modified Nodal Analysis) solver.
+///
+/// Implements nonlinear circuit solving based on Newton-Raphson iteration,
+/// supporting resistors, capacitors, inductors, coupled inductors, and vacuum tube devices.
 pub struct CircuitSolver {
+    /// 节点总数
     pub num_nodes: usize,
+    /// MNA 电导矩阵（G 矩阵）
     pub g: [[f64; MAX_NODES]; MAX_NODES],
+    /// MNA 电流向量（I 向量）
     pub i: [f64; MAX_NODES],
+    /// 节点电压向量
     pub v: [f64; MAX_NODES],
+    /// 上一迭代的节点电压（用于 Backward Euler）
     v_prev: [f64; MAX_NODES],
 }
 
 impl CircuitSolver {
+    /// 创建新的求解器实例。
+    ///
+    /// # 参数 / Arguments
+    ///
+    /// * `num_nodes` - 电路节点总数（范围：1 ~ 30）
+    ///
+    /// # 返回值 / Returns
+    ///
+    /// 返回初始化后的求解器实例
+    ///
+    /// ---
+    ///
+    /// Create a new solver instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_nodes` - Total circuit nodes (range: 1 ~ 30)
+    ///
+    /// # Returns
+    ///
+    /// Returns initialized solver instance
     pub fn new(num_nodes: usize) -> Self {
         Self {
             num_nodes,
@@ -32,11 +74,66 @@ impl CircuitSolver {
         }
     }
 
+    /// 重置求解器状态。
+    ///
+    /// 将节点电压向量清零。
+    ///
+    /// ---
+    ///
+    /// Reset solver state.
+    ///
+    /// Clears the node voltage vector to zero.
     pub fn reset(&mut self) {
         self.v = [0.0; MAX_NODES];
         self.v_prev = [0.0; MAX_NODES];
     }
 
+    /// 求解电路方程。
+    ///
+    /// 使用 Newton-Raphson 迭代求解非线性电路方程，
+    /// 更新节点电压向量。
+    ///
+    /// # 参数 / Arguments
+    ///
+    /// * `circuit` - 电路定义
+    /// * `triode_params` - 三极管参数表
+    /// * `pentode_params` - 五极管参数表
+    /// * `diode_params` - 二极管参数表
+    /// * `h` - 采样周期（单位：秒，1/采样率）
+    /// * `vin` - 输入信号电压（单位：V）
+    ///
+    /// # 返回值 / Returns
+    ///
+    /// 成功返回 `()`，迭代发散时返回 `Err(DanjiError::Diverged)`
+    ///
+    /// # Panics
+    ///
+    /// 当 Newton-Raphson 迭代在 `MAX_ITER` 次内未收敛时返回 `Err(DanjiError::Diverged)`
+    ///
+    /// ---
+    ///
+    /// Solve circuit equations.
+    ///
+    /// Uses Newton-Raphson iteration to solve nonlinear circuit equations,
+    /// updating the node voltage vector.
+    ///
+    /// # Arguments
+    ///
+    /// * `circuit` - Circuit definition
+    /// * `triode_params` - Triode parameter table
+    /// * `pentode_params` - Pentode parameter table
+    /// * `diode_params` - Diode parameter table
+    /// * `h` - Sample period (unit: seconds, 1/sample_rate)
+    /// * `vin` - Input signal voltage (unit: V)
+    ///
+    /// # Returns
+    ///
+    /// Returns `()` on success, `Err(DanjiError::Diverged)` when iteration diverges
+    ///
+    /// # Panics
+    ///
+    /// Returns `Err(DanjiError::Diverged)` when Newton-Raphson iteration
+    /// doesn't converge within `MAX_ITER` iterations
     pub fn solve(
         &mut self,
         circuit: &CircuitDef,

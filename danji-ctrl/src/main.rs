@@ -1,3 +1,14 @@
+//! danji-ctrl - 真空管放大器 GUI 控制器。
+//!
+//! 本程序提供图形用户界面，用于控制实时仿真守护进程的参数。
+//!
+//! ---
+//!
+//! danji-ctrl - Vacuum tube amplifier GUI controller.
+//!
+//! This program provides a graphical user interface for controlling
+//! real-time simulation daemon parameters.
+
 mod daemon;
 
 use daemon::{AppState, DaemonCtrl};

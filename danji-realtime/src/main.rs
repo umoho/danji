@@ -1,3 +1,15 @@
+//! danji-realtime - 真空管放大器实时音频守护进程。
+//!
+//! 本程序通过 BlackHole 虚拟音频设备捕获系统音频，
+//! 实时处理后输出到物理音频设备。
+//!
+//! ---
+//!
+//! danji-realtime - Vacuum tube amplifier real-time audio daemon.
+//!
+//! This program captures system audio through BlackHole virtual audio device,
+//! processes it in real-time, and outputs to physical audio device.
+
 mod engine;
 mod params;
 mod socket;

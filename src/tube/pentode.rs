@@ -1,5 +1,38 @@
 use crate::tube::params::PentodeParams;
 
+/// 计算五极管屏极电流。
+///
+/// 基于改进的 Koren 模型计算五极管在给定电压下的屏极电流。
+///
+/// # 参数 / Arguments
+///
+/// * `vp` - 屏极电压（单位：V，范围：0 ~ 500）
+/// * `vg1` - 控制栅极电压（单位：V，范围：-50 ~ 0）
+/// * `vg2` - 帘栅极电压（单位：V，范围：0 ~ 500）
+/// * `vc` - 阴极电压（单位：V，范围：0 ~ 50）
+/// * `params` - 五极管参数
+///
+/// # 返回值 / Returns
+///
+/// 返回屏极电流（单位：A，范围：0 ~ 0.5）
+///
+/// ---
+///
+/// Calculate pentode plate current.
+///
+/// Calculates pentode plate current based on modified Koren model.
+///
+/// # Arguments
+///
+/// * `vp` - Plate voltage (unit: V, range: 0 ~ 500)
+/// * `vg1` - Control grid voltage (unit: V, range: -50 ~ 0)
+/// * `vg2` - Screen grid voltage (unit: V, range: 0 ~ 500)
+/// * `vc` - Cathode voltage (unit: V, range: 0 ~ 50)
+/// * `params` - Pentode parameters
+///
+/// # Returns
+///
+/// Returns plate current (unit: A, range: 0 ~ 0.5)
 pub fn plate_current(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
     let vpk = vp - vc;
     let vg1k = vg1 - vc;
@@ -21,6 +54,33 @@ pub fn plate_current(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParam
     ip * (vpk / params.kvb).atan()
 }
 
+/// 计算五极管帘栅极电流。
+///
+/// # 参数 / Arguments
+///
+/// * `vg1` - 控制栅极电压（单位：V，范围：-50 ~ 0）
+/// * `vg2` - 帘栅极电压（单位：V，范围：0 ~ 500）
+/// * `vc` - 阴极电压（单位：V，范围：0 ~ 50）
+/// * `params` - 五极管参数
+///
+/// # 返回值 / Returns
+///
+/// 返回帘栅极电流（单位：A，范围：0 ~ 0.1）
+///
+/// ---
+///
+/// Calculate pentode screen grid current.
+///
+/// # Arguments
+///
+/// * `vg1` - Control grid voltage (unit: V, range: -50 ~ 0)
+/// * `vg2` - Screen grid voltage (unit: V, range: 0 ~ 500)
+/// * `vc` - Cathode voltage (unit: V, range: 0 ~ 50)
+/// * `params` - Pentode parameters
+///
+/// # Returns
+///
+/// Returns screen grid current (unit: A, range: 0 ~ 0.1)
 pub fn screen_current(vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
     let vg1k = vg1 - vc;
     let vg2k = vg2 - vc;
@@ -34,6 +94,11 @@ pub fn screen_current(vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f6
     e.powf(1.5) / params.kg2
 }
 
+/// 计算五极管屏极电流对屏极电压的偏导数 (∂Ip/∂Vp)。
+///
+/// ---
+///
+/// Calculate pentode plate current partial derivative with respect to plate voltage (∂Ip/∂Vp).
 pub fn dip_dvp(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
     let eps = (1e-6_f64).max(vp.abs() * 1e-4);
     let i0 = plate_current(vp - eps, vg1, vg2, vc, params);
@@ -41,6 +106,12 @@ pub fn dip_dvp(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> 
     (i1 - i0) / (2.0 * eps)
 }
 
+/// 计算五极管屏极电流对控制栅极电压的偏导数 (∂Ip/∂Vg1)，即跨导 (gm)。
+///
+/// ---
+///
+/// Calculate pentode plate current partial derivative with respect to control grid voltage (∂Ip/∂Vg1),
+/// also known as transconductance (gm).
 pub fn dip_dvg1(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
     let eps = (1e-6_f64).max(vg1.abs() * 1e-4);
     let i0 = plate_current(vp, vg1 - eps, vg2, vc, params);
@@ -48,6 +119,11 @@ pub fn dip_dvg1(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) ->
     (i1 - i0) / (2.0 * eps)
 }
 
+/// 计算五极管屏极电流对帘栅极电压的偏导数 (∂Ip/∂Vg2)。
+///
+/// ---
+///
+/// Calculate pentode plate current partial derivative with respect to screen grid voltage (∂Ip/∂Vg2).
 pub fn dip_dvg2(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
     let eps = (1e-6_f64).max(vg2.abs() * 1e-4);
     let i0 = plate_current(vp, vg1, vg2 - eps, vc, params);
@@ -55,12 +131,26 @@ pub fn dip_dvg2(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) ->
     (i1 - i0) / (2.0 * eps)
 }
 
+/// 计算五极管屏极电流对阴极电压的偏导数 (∂Ip/∂Vc)。
+///
+/// 通过链式法则计算：∂Ip/∂Vc = -(∂Ip/∂Vp + ∂Ip/∂Vg1 + ∂Ip/∂Vg2)
+///
+/// ---
+///
+/// Calculate pentode plate current partial derivative with respect to cathode voltage (∂Ip/∂Vc).
+///
+/// Calculated using chain rule: ∂Ip/∂Vc = -(∂Ip/∂Vp + ∂Ip/∂Vg1 + ∂Ip/∂Vg2)
 pub fn dip_dvc(vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
     -(dip_dvp(vp, vg1, vg2, vc, params)
         + dip_dvg1(vp, vg1, vg2, vc, params)
         + dip_dvg2(vp, vg1, vg2, vc, params))
 }
 
+/// 计算五极管帘栅极电流对帘栅极电压的偏导数 (∂Ig2/∂Vg2)。
+///
+/// ---
+///
+/// Calculate pentode screen grid current partial derivative with respect to screen grid voltage (∂Ig2/∂Vg2).
 pub fn dig2_dvg2(_vp: f64, vg1: f64, vg2: f64, vc: f64, params: &PentodeParams) -> f64 {
     let eps = (1e-6_f64).max(vg2.abs() * 1e-4);
     let i0 = screen_current(vg1 - eps, vg2, vc, params);

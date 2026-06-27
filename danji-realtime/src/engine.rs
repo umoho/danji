@@ -1,3 +1,14 @@
+//! 音频处理引擎模块。
+//!
+//! 提供音频输入/输出设备管理、实时音频处理和滤波器实现。
+//!
+//! ---
+//!
+//! Audio processing engine module.
+//!
+//! Provides audio input/output device management, real-time audio processing,
+//! and filter implementations.
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::StreamConfig;
 use danji::{single_triode_config, DiodeParams, NodeId, SimConfig, Simulator, TriodeParams};

@@ -1,9 +1,45 @@
+/// 二极管参数（Child-Langmuir 模型）。
+///
+/// 包含二极管仿真的所有物理参数。
+///
+/// # 字段说明 / Fields
+///
+/// * `k` - Child-Langmuir 系数
+/// * `gamma` - 幂律指数
+///
+/// ---
+///
+/// Diode parameters (Child-Langmuir model).
+///
+/// Contains all physical parameters for diode simulation.
+///
+/// # Fields
+///
+/// * `k` - Child-Langmuir coefficient
+/// * `gamma` - Power law exponent
 pub struct DiodeParams {
+    /// Child-Langmuir 系数
     pub k: f64,
+    /// 幂律指数
     pub gamma: f64,
 }
 
 impl DiodeParams {
+    /// 创建二极管参数。
+    ///
+    /// # 参数 / Arguments
+    ///
+    /// * `k` - Child-Langmuir 系数
+    /// * `gamma` - 幂律指数
+    ///
+    /// ---
+    ///
+    /// Create diode parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `k` - Child-Langmuir coefficient
+    /// * `gamma` - Power law exponent
     pub const fn new(k: f64, gamma: f64) -> Self {
         Self { k, gamma }
     }
@@ -34,6 +70,33 @@ impl DiodeParams {
     }
 }
 
+/// 计算二极管电流。
+///
+/// 基于 Child-Langmuir 定律计算二极管在给定电压下的电流。
+///
+/// # 参数 / Arguments
+///
+/// * `vpk` - 阳极-阴极电压（单位：V，范围：0 ~ 1000）
+/// * `params` - 二极管参数
+///
+/// # 返回值 / Returns
+///
+/// 返回二极管电流（单位：A，范围：0 ~ 1.0）
+///
+/// ---
+///
+/// Calculate diode current.
+///
+/// Calculates diode current based on Child-Langmuir law.
+///
+/// # Arguments
+///
+/// * `vpk` - Anode-cathode voltage (unit: V, range: 0 ~ 1000)
+/// * `params` - Diode parameters
+///
+/// # Returns
+///
+/// Returns diode current (unit: A, range: 0 ~ 1.0)
 pub fn diode_current(vpk: f64, params: &DiodeParams) -> f64 {
     if vpk <= 0.0 {
         return 0.0;
@@ -41,6 +104,33 @@ pub fn diode_current(vpk: f64, params: &DiodeParams) -> f64 {
     params.k * vpk.powf(params.gamma)
 }
 
+/// 计算二极管电导 (dI/dV)。
+///
+/// 使用数值差分法计算二极管电导。
+///
+/// # 参数 / Arguments
+///
+/// * `vpk` - 阳极-阴极电压（单位：V，范围：0 ~ 1000）
+/// * `params` - 二极管参数
+///
+/// # 返回值 / Returns
+///
+/// 返回二极管电导（单位：S，西门子）
+///
+/// ---
+///
+/// Calculate diode conductance (dI/dV).
+///
+/// Uses numerical differentiation.
+///
+/// # Arguments
+///
+/// * `vpk` - Anode-cathode voltage (unit: V, range: 0 ~ 1000)
+/// * `params` - Diode parameters
+///
+/// # Returns
+///
+/// Returns diode conductance (unit: S, Siemens)
 pub fn diode_conductance(vpk: f64, params: &DiodeParams) -> f64 {
     let eps = (1e-6_f64).max(vpk.abs() * 1e-4);
     let i0 = diode_current(vpk - eps, params);
