@@ -2,7 +2,7 @@
 ///
 /// 包含二极管仿真的所有物理参数。
 ///
-/// # 字段说明 / Fields
+/// # 字段说明
 ///
 /// * `k` - Child-Langmuir 系数
 /// * `gamma` - 幂律指数
@@ -27,7 +27,7 @@ pub struct DiodeParams {
 impl DiodeParams {
     /// 创建二极管参数。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `k` - Child-Langmuir 系数
     /// * `gamma` - 幂律指数
@@ -74,12 +74,12 @@ impl DiodeParams {
 ///
 /// 基于 Child-Langmuir 定律计算二极管在给定电压下的电流。
 ///
-/// # 参数 / Arguments
+/// # 参数
 ///
 /// * `vpk` - 阳极-阴极电压（单位：V，范围：0 ~ 1000）
 /// * `params` - 二极管参数
 ///
-/// # 返回值 / Returns
+/// # 返回值
 ///
 /// 返回二极管电流（单位：A，范围：0 ~ 1.0）
 ///
@@ -108,12 +108,12 @@ pub fn diode_current(vpk: f64, params: &DiodeParams) -> f64 {
 ///
 /// 使用数值差分法计算二极管电导。
 ///
-/// # 参数 / Arguments
+/// # 参数
 ///
 /// * `vpk` - 阳极-阴极电压（单位：V，范围：0 ~ 1000）
 /// * `params` - 二极管参数
 ///
-/// # 返回值 / Returns
+/// # 返回值
 ///
 /// 返回二极管电导（单位：S，西门子）
 ///

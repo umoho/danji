@@ -18,7 +18,7 @@ pub struct Resistor {
 impl Resistor {
     /// 创建新的电阻。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `a` - 节点 A
     /// * `b` - 节点 B
@@ -62,7 +62,7 @@ pub struct Capacitor {
 impl Capacitor {
     /// 创建新的电容。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `a` - 节点 A
     /// * `b` - 节点 B
@@ -111,7 +111,7 @@ pub struct Inductor {
 impl Inductor {
     /// 创建新的电感。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `a` - 节点 A
     /// * `b` - 节点 B
@@ -170,7 +170,7 @@ pub struct CoupledInductor {
 impl CoupledInductor {
     /// 创建新的双绕组耦合电感。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `p_a` - 初级绕组节点 A
     /// * `p_b` - 初级绕组节点 B
@@ -261,7 +261,7 @@ pub struct CoupledInductor3 {
 impl CoupledInductor3 {
     /// 创建新的三绕组耦合电感。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `p1` - 初级绕组 1 节点
     /// * `ct` - 初级中心抽头节点

@@ -3,7 +3,7 @@
 /// 包含三极管仿真的所有物理参数，基于 Koren 模型。
 /// 使用 [`TriodeParams::new_12ax7`] 等工厂方法获取预设参数。
 ///
-/// # 字段说明 / Fields
+/// # 字段说明
 ///
 /// * `mu` - 放大系数 (μ)
 /// * `ex` - 幂律指数
@@ -43,7 +43,7 @@ pub struct TriodeParams {
 impl TriodeParams {
     /// 创建三极管参数。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `mu` - 放大系数 (μ)
     /// * `ex` - 幂律指数
@@ -118,7 +118,7 @@ impl TriodeParams {
 /// 包含五极管仿真的所有物理参数，基于 Koren 模型。
 /// 使用 [`PentodeParams::new_el84`] 等工厂方法获取预设参数。
 ///
-/// # 字段说明 / Fields
+/// # 字段说明
 ///
 /// * `mu` - 放大系数 (μ)
 /// * `ex` - 幂律指数
@@ -162,7 +162,7 @@ pub struct PentodeParams {
 impl PentodeParams {
     /// 创建五极管参数。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `mu` - 放大系数 (μ)
     /// * `ex` - 幂律指数

@@ -45,11 +45,11 @@ pub struct CircuitSolver {
 impl CircuitSolver {
     /// 创建新的求解器实例。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `num_nodes` - 电路节点总数（范围：1 ~ 30）
     ///
-    /// # 返回值 / Returns
+    /// # 返回值
     ///
     /// 返回初始化后的求解器实例
     ///
@@ -93,7 +93,7 @@ impl CircuitSolver {
     /// 使用 Newton-Raphson 迭代求解非线性电路方程，
     /// 更新节点电压向量。
     ///
-    /// # 参数 / Arguments
+    /// # 参数
     ///
     /// * `circuit` - 电路定义
     /// * `triode_params` - 三极管参数表
@@ -102,7 +102,7 @@ impl CircuitSolver {
     /// * `h` - 采样周期（单位：秒，1/采样率）
     /// * `vin` - 输入信号电压（单位：V）
     ///
-    /// # 返回值 / Returns
+    /// # 返回值
     ///
     /// 成功返回 `()`，迭代发散时返回 `Err(DanjiError::Diverged)`
     ///
