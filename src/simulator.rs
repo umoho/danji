@@ -72,45 +72,73 @@ pub struct SimConfig {
     pub num_nodes: usize,
 
     /// 电阻列表
+    ///
+    /// Resistor list
     pub resistors: Vec<Resistor>,
 
     /// 电容列表
+    ///
+    /// Capacitor list
     pub capacitors: Vec<Capacitor>,
 
     /// 电感列表
+    ///
+    /// Inductor list
     pub inductors: Vec<Inductor>,
 
     /// 双绕组耦合电感列表
+    ///
+    /// Dual-winding coupled inductor list
     pub coupled_inductors: Vec<CoupledInductor>,
 
     /// 三绕组耦合电感列表
+    ///
+    /// Three-winding coupled inductor list
     pub coupled_inductors3: Vec<CoupledInductor3>,
 
     /// 三极管实例列表
+    ///
+    /// Triode instance list
     pub triodes: Vec<TriodeInstance>,
 
     /// 五极管实例列表
+    ///
+    /// Pentode instance list
     pub pentodes: Vec<PentodeInstance>,
 
     /// 二极管实例列表
+    ///
+    /// Diode instance list
     pub diodes: Vec<DiodeInstance>,
 
     /// 输入信号节点
+    ///
+    /// Input signal node
     pub input_node: NodeId,
 
     /// 第二输入信号节点（用于推挽等场景）
+    ///
+    /// Second input signal node (for push-pull etc.)
     pub(crate) input2_node: NodeId,
 
     /// 第二输入信号电压
+    ///
+    /// Second input signal voltage
     pub(crate) input2_voltage: f64,
 
     /// 输出信号节点
+    ///
+    /// Output signal node
     pub output_node: NodeId,
 
     /// B+ 电源节点
+    ///
+    /// B+ power supply node
     pub bplus_node: NodeId,
 
     /// B+ 电源电压（单位：V，范围：0 ~ 500）
+    ///
+    /// B+ voltage (unit: V, range: 0 ~ 500)
     pub bplus_voltage: f64,
 }
 

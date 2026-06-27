@@ -67,26 +67,36 @@ impl DiodeParams {
     }
 
     /// 5AR4 / GZ34
+    ///
+    /// 5AR4 / GZ34
     pub const fn new_5ar4() -> Self {
         Self::new(0.005, 1.5)
     }
 
+    /// 5U4G
+    ///
     /// 5U4G
     pub const fn new_5u4g() -> Self {
         Self::new(0.003, 1.5)
     }
 
     /// 6X4
+    ///
+    /// 6X4
     pub const fn new_6x4() -> Self {
         Self::new(0.002, 1.5)
     }
 
+    /// EZ81
+    ///
     /// EZ81
     pub const fn new_ez81() -> Self {
         Self::new(0.004, 1.5)
     }
 
     /// 硅二极管（用于对比）
+    ///
+    /// Silicon diode (for comparison)
     pub const fn new_silicon() -> Self {
         Self::new(1e-6, 2.0)
     }
