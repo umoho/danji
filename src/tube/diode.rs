@@ -2,25 +2,19 @@
 ///
 /// 包含二极管仿真的所有物理参数。
 ///
-/// # 字段说明
-///
-/// * `k` - Child-Langmuir 系数
-/// * `gamma` - 幂律指数
-///
 /// ---
 ///
 /// Diode parameters (Child-Langmuir model).
 ///
 /// Contains all physical parameters for diode simulation.
-///
-/// # Fields
-///
-/// * `k` - Child-Langmuir coefficient
-/// * `gamma` - Power law exponent
 pub struct DiodeParams {
     /// Child-Langmuir 系数
+    ///
+    /// Child-Langmuir coefficient
     pub k: f64,
     /// 幂律指数
+    ///
+    /// Power law exponent
     pub gamma: f64,
 }
 

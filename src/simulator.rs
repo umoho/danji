@@ -24,16 +24,28 @@ use log::{debug, info};
 /// then create a `Simulator` instance for simulation.
 pub struct Simulator {
     /// 电路配置
+    ///
+    /// Circuit configuration
     config: SimConfig,
     /// MNA 求解器
+    ///
+    /// MNA solver
     solver: CircuitSolver,
     /// 三极管参数表
+    ///
+    /// Triode parameter table
     triode_params: Vec<TriodeParams>,
     /// 五极管参数表
+    ///
+    /// Pentode parameter table
     pentode_params: Vec<PentodeParams>,
     /// 二极管参数表
+    ///
+    /// Diode parameter table
     diode_params: Vec<DiodeParams>,
     /// 已处理的采样点计数
+    ///
+    /// Number of processed samples
     sample_count: usize,
 }
 

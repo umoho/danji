@@ -8,10 +8,16 @@ use crate::circuit::node::NodeId;
 #[derive(Debug, Clone)]
 pub struct Resistor {
     /// 节点 A
+    ///
+    /// Node A
     pub a: NodeId,
     /// 节点 B
+    ///
+    /// Node B
     pub b: NodeId,
     /// 电阻值（单位：欧姆）
+    ///
+    /// Resistance (unit: ohms)
     pub ohms: f64,
 }
 
@@ -50,12 +56,20 @@ impl Resistor {
 #[derive(Debug, Clone)]
 pub struct Capacitor {
     /// 节点 A
+    ///
+    /// Node A
     pub a: NodeId,
     /// 节点 B
+    ///
+    /// Node B
     pub b: NodeId,
     /// 电容值（单位：法拉）
+    ///
+    /// Capacitance (unit: farads)
     pub farads: f64,
     /// 上一采样周期的电压（内部状态）
+    ///
+    /// Previous sample voltage (internal state)
     pub(crate) v_prev: f64,
 }
 
@@ -99,12 +113,20 @@ impl Capacitor {
 #[derive(Debug, Clone)]
 pub struct Inductor {
     /// 节点 A
+    ///
+    /// Node A
     pub a: NodeId,
     /// 节点 B
+    ///
+    /// Node B
     pub b: NodeId,
     /// 电感值（单位：亨利）
+    ///
+    /// Inductance (unit: henrys)
     pub henrys: f64,
     /// 上一采样周期的电流（内部状态）
+    ///
+    /// Previous sample current (internal state)
     pub(crate) i_prev: f64,
 }
 
@@ -148,22 +170,40 @@ impl Inductor {
 #[derive(Debug, Clone)]
 pub struct CoupledInductor {
     /// 初级绕组节点 A
+    ///
+    /// Primary winding node A
     pub p_a: NodeId,
     /// 初级绕组节点 B
+    ///
+    /// Primary winding node B
     pub p_b: NodeId,
     /// 次级绕组节点 A
+    ///
+    /// Secondary winding node A
     pub s_a: NodeId,
     /// 次级绕组节点 B
+    ///
+    /// Secondary winding node B
     pub s_b: NodeId,
     /// 初级电感值（单位：亨利）
+    ///
+    /// Primary inductance (unit: henrys)
     pub l_primary: f64,
     /// 次级电感值（单位：亨利）
+    ///
+    /// Secondary inductance (unit: henrys)
     pub l_secondary: f64,
     /// 耦合系数（范围：0.0 ~ 1.0）
+    ///
+    /// Coupling coefficient (range: 0.0 ~ 1.0)
     pub coupling: f64,
     /// 初级绕组上一采样周期的电流（内部状态）
+    ///
+    /// Primary winding previous sample current (internal state)
     pub(crate) i1_prev: f64,
     /// 次级绕组上一采样周期的电流（内部状态）
+    ///
+    /// Secondary winding previous sample current (internal state)
     pub(crate) i2_prev: f64,
 }
 
@@ -229,32 +269,60 @@ impl CoupledInductor {
 #[derive(Debug, Clone)]
 pub struct CoupledInductor3 {
     /// 初级绕组 1 节点
+    ///
+    /// Primary winding 1 node
     pub p1: NodeId,
     /// 初级中心抽头节点
+    ///
+    /// Primary center tap node
     pub ct: NodeId,
     /// 初级绕组 2 节点
+    ///
+    /// Primary winding 2 node
     pub p2: NodeId,
     /// 次级绕组 1 节点
+    ///
+    /// Secondary winding 1 node
     pub s1: NodeId,
     /// 次级绕组 2 节点
+    ///
+    /// Secondary winding 2 node
     pub s2: NodeId,
     /// 绕组 1 电感值（单位：亨利）
+    ///
+    /// Winding 1 inductance (unit: henrys)
     pub l1: f64,
     /// 绕组 2 电感值（单位：亨利）
+    ///
+    /// Winding 2 inductance (unit: henrys)
     pub l2: f64,
     /// 绕组 3 电感值（单位：亨利）
+    ///
+    /// Winding 3 inductance (unit: henrys)
     pub l3: f64,
     /// 绕组 1-2 耦合系数
+    ///
+    /// Winding 1-2 coupling coefficient
     pub k12: f64,
     /// 绕组 1-3 耦合系数
+    ///
+    /// Winding 1-3 coupling coefficient
     pub k13: f64,
     /// 绕组 2-3 耦合系数
+    ///
+    /// Winding 2-3 coupling coefficient
     pub k23: f64,
     /// 绕组 1 上一采样周期的电流（内部状态）
+    ///
+    /// Winding 1 previous sample current (internal state)
     pub(crate) i1_prev: f64,
     /// 绕组 2 上一采样周期的电流（内部状态）
+    ///
+    /// Winding 2 previous sample current (internal state)
     pub(crate) i2_prev: f64,
     /// 绕组 3 上一采样周期的电流（内部状态）
+    ///
+    /// Winding 3 previous sample current (internal state)
     pub(crate) i3_prev: f64,
 }
 
@@ -333,12 +401,20 @@ impl CoupledInductor3 {
 #[derive(Debug, Clone)]
 pub struct TriodeInstance {
     /// 屏极节点
+    ///
+    /// Plate node
     pub plate: NodeId,
     /// 栅极节点
+    ///
+    /// Grid node
     pub grid: NodeId,
     /// 阴极节点
+    ///
+    /// Cathode node
     pub cathode: NodeId,
     /// 参数索引（指向三极管参数表）
+    ///
+    /// Parameter index (into triode parameter table)
     pub params_idx: usize,
 }
 
@@ -350,10 +426,16 @@ pub struct TriodeInstance {
 #[derive(Debug, Clone)]
 pub struct DiodeInstance {
     /// 阳极节点
+    ///
+    /// Anode node
     pub anode: NodeId,
     /// 阴极节点
+    ///
+    /// Cathode node
     pub cathode: NodeId,
     /// 参数索引（指向二极管参数表）
+    ///
+    /// Parameter index (into diode parameter table)
     pub params_idx: usize,
 }
 
@@ -365,14 +447,24 @@ pub struct DiodeInstance {
 #[derive(Debug, Clone)]
 pub struct PentodeInstance {
     /// 屏极节点
+    ///
+    /// Plate node
     pub plate: NodeId,
     /// 控制栅极节点
+    ///
+    /// Control grid node
     pub grid: NodeId,
     /// 阴极节点
+    ///
+    /// Cathode node
     pub cathode: NodeId,
     /// 帘栅极节点
+    ///
+    /// Screen grid node
     pub screen: NodeId,
     /// 参数索引（指向五极管参数表）
+    ///
+    /// Parameter index (into pentode parameter table)
     pub params_idx: usize,
 }
 
@@ -399,33 +491,63 @@ pub const MAX_NODES: usize = 30;
 #[derive(Debug, Clone)]
 pub struct CircuitDef {
     /// 节点总数
+    ///
+    /// Total number of nodes
     pub num_nodes: usize,
     /// 电阻列表
+    ///
+    /// Resistor list
     pub resistors: Vec<Resistor>,
     /// 电容列表
+    ///
+    /// Capacitor list
     pub capacitors: Vec<Capacitor>,
     /// 电感列表
+    ///
+    /// Inductor list
     pub inductors: Vec<Inductor>,
     /// 双绕组耦合电感列表
+    ///
+    /// Dual-winding coupled inductor list
     pub coupled_inductors: Vec<CoupledInductor>,
     /// 三绕组耦合电感列表
+    ///
+    /// Three-winding coupled inductor list
     pub coupled_inductors3: Vec<CoupledInductor3>,
     /// 三极管实例列表
+    ///
+    /// Triode instance list
     pub triodes: Vec<TriodeInstance>,
     /// 五极管实例列表
+    ///
+    /// Pentode instance list
     pub pentodes: Vec<PentodeInstance>,
     /// 二极管实例列表
+    ///
+    /// Diode instance list
     pub diodes: Vec<DiodeInstance>,
     /// 输入信号节点
+    ///
+    /// Input signal node
     pub input_node: NodeId,
     /// 第二输入信号节点
+    ///
+    /// Second input signal node
     pub input2_node: NodeId,
     /// 第二输入信号电压
+    ///
+    /// Second input signal voltage
     pub input2_voltage: f64,
     /// 输出信号节点
+    ///
+    /// Output signal node
     pub output_node: NodeId,
     /// B+ 电源节点
+    ///
+    /// B+ power supply node
     pub bplus_node: NodeId,
     /// B+ 电源电压（单位：V）
+    ///
+    /// B+ voltage (unit: V)
     pub bplus_voltage: f64,
 }
