@@ -129,6 +129,19 @@ fn monitor_default_output(host: cpal::Host, cmd_tx: mpsc::Sender<MainCommand>) {
         if current_id != 0 && current_id != last_id {
             last_id = current_id;
             if let Some(new_device) = host.default_output_device() {
+                // 过滤 BlackHole 等虚拟设备，防止输入输出直连
+                let is_virtual = new_device
+                    .description()
+                    .map(|desc| {
+                        desc.name().contains("BlackHole")
+                            || desc.name().contains("多输出")
+                            || desc.name().contains("Aggregate")
+                    })
+                    .unwrap_or(true);
+                if is_virtual {
+                    log::debug!("Skipping virtual output device, keeping current output");
+                    continue;
+                }
                 let name = new_device
                     .description()
                     .map(|d| d.name().to_string())
