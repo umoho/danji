@@ -79,18 +79,18 @@ fn capture_to_file(path: &str, duration_secs: f64) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
-/// 监听内置音频设备的 data source 变化，检测耳机插拔并切换 danji 输出。
+/// 监听音频设备列表变化，检测耳机插拔并切换 danji 输出。
 ///
-/// Polls the built-in output device's data source every 200 ms. When the source
-/// changes (e.g. internal speakers ↔ headphones), sends a `SwitchOutput` command.
+/// Polls the system device list every 200 ms. When a device appears or
+/// disappears, sends a `SwitchOutput` command to switch output accordingly.
 #[cfg(target_os = "macos")]
 fn monitor_default_output(host: cpal::Host, cmd_tx: mpsc::Sender<MainCommand>) {
     use coreaudio_sys::{
-        kAudioDevicePropertyDataSource, kAudioDevicePropertyTransportType,
-        kAudioDeviceTransportTypeBuiltIn, kAudioHardwarePropertyDevices,
-        kAudioObjectPropertyScopeGlobal, kAudioObjectSystemObject, AudioObjectGetPropertyData,
-        AudioObjectGetPropertyDataSize, AudioObjectID, AudioObjectPropertyAddress,
+        kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal, kAudioObjectSystemObject,
+        AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectID,
+        AudioObjectPropertyAddress,
     };
+    use std::collections::HashSet;
     use std::mem;
 
     /// 获取所有音频设备 ID 列表。
@@ -123,129 +123,73 @@ fn monitor_default_output(host: cpal::Host, cmd_tx: mpsc::Sender<MainCommand>) {
         devices
     }
 
-    /// 获取设备的 transport type。
-    ///
-    /// Get the transport type of an audio device.
-    unsafe fn get_transport_type(device_id: AudioObjectID) -> u32 {
-        let address = AudioObjectPropertyAddress {
-            mSelector: kAudioDevicePropertyTransportType,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: 0,
-        };
-        let mut transport_type: u32 = 0;
-        let mut data_size = mem::size_of::<u32>() as u32;
-        AudioObjectGetPropertyData(
-            device_id,
-            &address,
-            0,
-            std::ptr::null(),
-            &mut data_size,
-            &mut transport_type as *mut _ as *mut std::ffi::c_void,
-        );
-        transport_type
-    }
+    // 获取初始设备集合
+    let initial_devices: HashSet<AudioObjectID> =
+        unsafe { get_all_device_ids() }.into_iter().collect();
 
-    /// 获取设备的 data source ID。
-    ///
-    /// Get the current data source ID of an audio device.
-    unsafe fn get_data_source(device_id: AudioObjectID) -> u32 {
-        let address = AudioObjectPropertyAddress {
-            mSelector: kAudioDevicePropertyDataSource,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: 0,
-        };
-        let mut source_id: u32 = 0;
-        let mut data_size = mem::size_of::<u32>() as u32;
-        AudioObjectGetPropertyData(
-            device_id,
-            &address,
-            0,
-            std::ptr::null(),
-            &mut data_size,
-            &mut source_id as *mut _ as *mut std::ffi::c_void,
-        );
-        source_id
-    }
+    log::info!(
+        "Output device monitor started ({} initial devices)",
+        initial_devices.len()
+    );
 
-    /// 在 cpal 中查找非内置、非虚拟的设备（即耳机/外置设备）。
-    ///
-    /// Find an external (non-built-in, non-virtual) cpal device.
-    fn find_external_device(host: &cpal::Host) -> Option<cpal::Device> {
-        host.devices().ok()?.find(|d| {
-            d.description()
-                .map(|desc| {
-                    let name = desc.name().to_string();
-                    !name.contains("BlackHole")
-                        && !name.contains("多输出")
-                        && !name.contains("Aggregate")
-                        // 排除内置设备名称
-                        && !name.contains("MacBook")
-                        && !name.contains("扬声器")
-                        && !name.contains("Speakers")
-                })
-                .unwrap_or(false)
-        })
-    }
-
-    // 四个字符码（native-endian，匹配 CoreAudio 返回值）
-    const ISPK: u32 = u32::from_ne_bytes(*b"ispk"); // 内置扬声器
-    const HDPN: u32 = u32::from_ne_bytes(*b"hdpn"); // 耳机
-
-    // 通过 CoreAudio transport type 找到内置设备的 ID（硬件 ID 不会变）
-    let builtin_coreaudio_id = unsafe {
-        get_all_device_ids()
-            .into_iter()
-            .find(|&id| get_transport_type(id) == kAudioDeviceTransportTypeBuiltIn)
-    };
-
-    let builtin_coreaudio_id = match builtin_coreaudio_id {
-        Some(id) => id,
-        None => {
-            log::warn!("No built-in output device found, monitor disabled");
-            return;
-        }
-    };
-
-    log::info!("Output device monitor started (built-in CoreAudio ID: {builtin_coreaudio_id})");
-
-    // 记录当前内置设备在 cpal 中的名字（启动时可能是"外置耳机"或"MacBook Pro扬声器"）
-    // 当 data source 变化时，cpal 设备名字可能会变，所以每次切换时重新查找
-    let mut last_source = unsafe { get_data_source(builtin_coreaudio_id) };
+    let mut known_devices = initial_devices;
 
     loop {
         thread::sleep(Duration::from_millis(200));
 
-        let current_source = unsafe { get_data_source(builtin_coreaudio_id) };
+        let current_devices: HashSet<AudioObjectID> =
+            unsafe { get_all_device_ids() }.into_iter().collect();
 
-        if current_source != 0 && current_source != last_source {
-            last_source = current_source;
+        let added: Vec<AudioObjectID> = current_devices
+            .difference(&known_devices)
+            .copied()
+            .collect();
+        let removed: Vec<AudioObjectID> = known_devices
+            .difference(&current_devices)
+            .copied()
+            .collect();
 
-            let target_device = if current_source == HDPN {
-                // 耳机插入 → 找外置设备
-                log::info!("Headphones detected, switching output");
-                find_external_device(&host)
-            } else if current_source == ISPK {
-                // 耳机拔出 → 切回内置扬声器
-                // 内置设备名字可能是"MacBook Pro扬声器"或"MacBook Pro Speakers"
-                log::info!("Headphones removed, switching to built-in speakers");
+        if !added.is_empty() || !removed.is_empty() {
+            log::info!("Device list changed: +{} -{}", added.len(), removed.len());
+
+            // 设备增加 → 耳机插入 → 找外置设备
+            // 设备减少 → 耳机拔出 → 切回内置扬声器
+            let target_device = if !added.is_empty() {
+                log::info!("Device added, switching to external output");
                 host.devices().ok().and_then(|devices| {
                     devices.into_iter().find(|d| {
-                        d.description()
-                            .map(|desc| {
-                                let name = desc.name().to_string();
-                                !name.contains("BlackHole")
-                                    && !name.contains("多输出")
-                                    && !name.contains("Aggregate")
-                                    && (name.contains("MacBook")
-                                        || name.contains("扬声器")
-                                        || name.contains("Speakers"))
-                            })
-                            .unwrap_or(false)
+                        d.default_output_config().is_ok()
+                            && d.description()
+                                .map(|desc| {
+                                    let name = desc.name().to_string();
+                                    !name.contains("BlackHole")
+                                        && !name.contains("多输出")
+                                        && !name.contains("Aggregate")
+                                        && !name.contains("MacBook")
+                                        && !name.contains("扬声器")
+                                        && !name.contains("Speakers")
+                                })
+                                .unwrap_or(false)
                     })
                 })
             } else {
-                log::debug!("Unknown data source: {current_source:#x}");
-                None
+                log::info!("Device removed, switching to built-in speakers");
+                host.devices().ok().and_then(|devices| {
+                    devices.into_iter().find(|d| {
+                        d.default_output_config().is_ok()
+                            && d.description()
+                                .map(|desc| {
+                                    let name = desc.name().to_string();
+                                    !name.contains("BlackHole")
+                                        && !name.contains("多输出")
+                                        && !name.contains("Aggregate")
+                                        && (name.contains("MacBook")
+                                            || name.contains("扬声器")
+                                            || name.contains("Speakers"))
+                                })
+                                .unwrap_or(false)
+                    })
+                })
             };
 
             if let Some(device) = target_device {
@@ -256,6 +200,8 @@ fn monitor_default_output(host: cpal::Host, cmd_tx: mpsc::Sender<MainCommand>) {
                 log::info!("Switching output to: {name}");
                 let _ = cmd_tx.send(MainCommand::SwitchOutput { device });
             }
+
+            known_devices = current_devices;
         }
     }
 }
