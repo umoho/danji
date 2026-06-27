@@ -228,9 +228,9 @@ pub struct CoupledInductor {
     ///
     /// Secondary inductance (unit: henrys)
     pub l_secondary: f64,
-    /// 耦合系数（范围：0.0 ~ 1.0）
+    /// 耦合系数（范围：0.0 ~ 1.0，越大耦合越强，典型值 0.9 ~ 0.99）
     ///
-    /// Coupling coefficient (range: 0.0 ~ 1.0)
+    /// Coupling coefficient (range: 0.0 ~ 1.0, higher = stronger coupling, typical: 0.9 ~ 0.99)
     pub coupling: f64,
     /// 初级绕组上一采样周期的电流（内部状态）
     ///
@@ -253,7 +253,7 @@ impl CoupledInductor {
     /// * `s_b` - 次级绕组节点 B
     /// * `l_primary` - 初级电感值（单位：亨利，范围：1e-6 ~ 100.0）
     /// * `l_secondary` - 次级电感值（单位：亨利，范围：1e-6 ~ 100.0）
-    /// * `coupling` - 耦合系数（范围：0.0 ~ 1.0，典型值：0.9 ~ 0.99）
+    /// * `coupling` - 耦合系数（范围：0.0 ~ 1.0，越大耦合越强，典型值 0.9 ~ 0.99）
     ///
     /// ---
     ///
@@ -267,7 +267,7 @@ impl CoupledInductor {
     /// * `s_b` - Secondary winding node B
     /// * `l_primary` - Primary inductance (unit: henrys, range: 1e-6 ~ 100.0)
     /// * `l_secondary` - Secondary inductance (unit: henrys, range: 1e-6 ~ 100.0)
-    /// * `coupling` - Coupling coefficient (range: 0.0 ~ 1.0, typical: 0.9 ~ 0.99)
+    /// * `coupling` - Coupling coefficient (range: 0.0 ~ 1.0, higher = stronger coupling, typical: 0.9 ~ 0.99)
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         p_a: NodeId,
@@ -374,9 +374,9 @@ impl CoupledInductor3 {
     /// * `l1` - 绕组 1 电感值（单位：亨利，范围：1e-6 ~ 100.0）
     /// * `l2` - 绕组 2 电感值（单位：亨利，范围：1e-6 ~ 100.0）
     /// * `l3` - 绕组 3 电感值（单位：亨利，范围：1e-6 ~ 100.0）
-    /// * `k12` - 绕组 1-2 耦合系数（范围：0.0 ~ 1.0）
-    /// * `k13` - 绕组 1-3 耦合系数（范围：0.0 ~ 1.0）
-    /// * `k23` - 绕组 2-3 耦合系数（范围：0.0 ~ 1.0）
+    /// * `k12` - 绕组 1-2 耦合系数（范围：0.0 ~ 1.0，越大耦合越强，典型值 0.9 ~ 0.99）
+    /// * `k13` - 绕组 1-3 耦合系数（范围：0.0 ~ 1.0，越大耦合越强，典型值 0.9 ~ 0.99）
+    /// * `k23` - 绕组 2-3 耦合系数（范围：0.0 ~ 1.0，越大耦合越强，典型值 0.9 ~ 0.99）
     ///
     /// ---
     ///
@@ -392,9 +392,9 @@ impl CoupledInductor3 {
     /// * `l1` - Winding 1 inductance (unit: henrys, range: 1e-6 ~ 100.0)
     /// * `l2` - Winding 2 inductance (unit: henrys, range: 1e-6 ~ 100.0)
     /// * `l3` - Winding 3 inductance (unit: henrys, range: 1e-6 ~ 100.0)
-    /// * `k12` - Winding 1-2 coupling coefficient (range: 0.0 ~ 1.0)
-    /// * `k13` - Winding 1-3 coupling coefficient (range: 0.0 ~ 1.0)
-    /// * `k23` - Winding 2-3 coupling coefficient (range: 0.0 ~ 1.0)
+    /// * `k12` - Winding 1-2 coupling coefficient (range: 0.0 ~ 1.0, higher = stronger coupling, typical: 0.9 ~ 0.99)
+    /// * `k13` - Winding 1-3 coupling coefficient (range: 0.0 ~ 1.0, higher = stronger coupling, typical: 0.9 ~ 0.99)
+    /// * `k23` - Winding 2-3 coupling coefficient (range: 0.0 ~ 1.0, higher = stronger coupling, typical: 0.9 ~ 0.99)
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         p1: NodeId,
