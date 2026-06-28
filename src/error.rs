@@ -11,11 +11,6 @@ use std::fmt;
 /// This enum defines all possible error conditions during simulation.
 #[derive(Debug)]
 pub enum DanjiError {
-    /// GPU 初始化失败
-    ///
-    /// GPU initialization failed
-    GpuInit(String),
-
     /// 迭代发散
     ///
     /// 在指定采样点处，Newton-Raphson 迭代未能收敛
@@ -79,7 +74,6 @@ pub enum DanjiError {
 impl fmt::Display for DanjiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DanjiError::GpuInit(msg) => write!(f, "GPU init failed: {}", msg),
             DanjiError::Diverged { sample, iterations } => {
                 write!(
                     f,

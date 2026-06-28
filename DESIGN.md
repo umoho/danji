@@ -119,7 +119,6 @@ danji/
 // 错误类型
 #[derive(Debug)]
 pub enum DanjiError {
-    GpuInit(String),
     Diverged { sample: usize, iterations: usize },
     SingularMatrix { node: usize },
     InvalidCircuit(String),
