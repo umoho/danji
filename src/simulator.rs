@@ -768,9 +768,6 @@ impl Simulator {
     pub fn reset(&mut self) {
         debug!("simulator reset after {} samples", self.sample_count);
         self.solver.reset();
-        for cap in &mut self.config.capacitors {
-            cap.v_prev = 0.0;
-        }
         for ind in &mut self.config.inductors {
             ind.i_prev = 0.0;
         }
@@ -872,14 +869,6 @@ impl Simulator {
             h,
             input as f64,
         )?;
-
-        for cap in &mut self.config.capacitors {
-            let a = cap.a.0;
-            let b = cap.b.0;
-            let v_a = if a > 0 { self.solver.v[a] } else { 0.0 };
-            let v_b = if b > 0 { self.solver.v[b] } else { 0.0 };
-            cap.v_prev = v_a - v_b;
-        }
 
         for ind in &mut self.config.inductors {
             let a = ind.a.0;

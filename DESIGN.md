@@ -138,7 +138,7 @@ pub struct DiodeParams { pub k: f64, pub gamma: f64 }
 
 // 电路元件
 pub struct Resistor { pub a: NodeId, pub b: NodeId, pub ohms: f64 }
-pub struct Capacitor { pub a: NodeId, pub b: NodeId, pub farads: f64, pub(crate) v_prev: f64 }
+pub struct Capacitor { pub a: NodeId, pub b: NodeId, pub farads: f64 }
 pub struct Inductor { pub a: NodeId, pub b: NodeId, pub henrys: f64, pub(crate) i_prev: f64 }
 pub struct CoupledInductor { pub p_a: NodeId, pub p_b: NodeId, pub s_a: NodeId, pub s_b: NodeId, ... }
 pub struct TriodeInstance { pub plate: NodeId, pub grid: NodeId, pub cathode: NodeId, pub params_idx: usize }

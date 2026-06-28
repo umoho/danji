@@ -102,10 +102,6 @@ pub struct Capacitor {
     ///
     /// Capacitance (unit: farads)
     pub farads: f64,
-    /// 上一采样周期的电压（内部状态）
-    ///
-    /// Previous sample voltage (internal state)
-    pub(crate) v_prev: f64,
 }
 
 impl Capacitor {
@@ -127,12 +123,7 @@ impl Capacitor {
     /// * `b` - Node B
     /// * `farads` - Capacitance (unit: farads, range: 1e-15 ~ 1.0)
     pub fn new(a: NodeId, b: NodeId, farads: f64) -> Self {
-        Self {
-            a,
-            b,
-            farads,
-            v_prev: 0.0,
-        }
+        Self { a, b, farads }
     }
 }
 
